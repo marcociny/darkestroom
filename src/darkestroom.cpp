@@ -12,7 +12,7 @@
 #include "messages.h"
 using namespace std;
 
-#define DEBUG_MODE 2
+#define DEBUG_MODE 0
 
 // start of global structures
 

@@ -10,6 +10,7 @@
 #include "floor_lights.h"
 #include "floor_collisions.h"
 #include "messages.h"
+#include "logo.h"
 using namespace std;
 
 #define DEBUG_MODE 0
@@ -456,13 +457,6 @@ void Settings() {
     WINDOW* win = newwin(LINES,COLS,0,0);
     keypad(win, TRUE);
 
-    vector<string> logo = {
-        " ____     __    ____  _  _  ____  ___  ____    ____  _____  _____  __  __ ",
-        "(  _ \\   /__\\  (  _ \\( )/ )( ___)/ __)(_  _)  (  _ \\(  _  )(  _  )(  \\/  )",
-        " )(_) ) /(__)\\  )   / )  (  )__) \\__ \\  )(     )   / )(_)(  )(_)(  )    ( ",
-        "(____/ (__)(__)(_)\\_)(_)\\_)(____)(___/ (__)   (_)\\_)(_____)(_____)(_/\\/\\_)",
-    };
-
     vector<string> options = {
         msgs[LANG_OPTION]["optFramerate"],
         msgs[LANG_OPTION]["optLanguage"],
@@ -563,13 +557,6 @@ int TitleScreen(int start_selected) {
     
 
     int in;
-
-    vector<string> logo = {
-        " ____     __    ____  _  _  ____  ___  ____    ____  _____  _____  __  __ ",
-        "(  _ \\   /__\\  (  _ \\( )/ )( ___)/ __)(_  _)  (  _ \\(  _  )(  _  )(  \\/  )",
-        " )(_) ) /(__)\\  )   / )  (  )__) \\__ \\  )(     )   / )(_)(  )(_)(  )    ( ",
-        "(____/ (__)(__)(_)\\_)(_)\\_)(____)(___/ (__)   (_)\\_)(_____)(_____)(_/\\/\\_)",
-    };
 
     vector<string> options = {
         msgs[LANG_OPTION]["optPlay"],

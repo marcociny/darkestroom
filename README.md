@@ -5,7 +5,6 @@ Adventure game made in ncurses.
 
 ## Linux
 
-Install the **gcc** and **ncurses** packages, then run the following command:
-`g++ main.cpp -lncurses`
+Install the **gcc** and **ncurses** packages, then run the following command to compile the game's code: `g++ main.cpp -lncurses`
 
-After that, run the compiled program.
+After that, run the executable file (named `a.out` by default).

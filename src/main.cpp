@@ -6,11 +6,12 @@
 #include <list>
 #include <ncurses.h>
 #include <locale.h>
-#include "floor_art.h"
-#include "floor_lights.h"
-#include "floor_collisions.h"
-#include "messages.h"
-#include "logo.h"
+#include "assets/logo.h"
+#include "assets/floor_art.h"
+#include "assets/floor_lights.h"
+#include "assets/floor_collisions.h"
+#include "assets/messages.h"
+
 using namespace std;
 
 #define DEBUG_MODE 0

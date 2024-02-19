@@ -11,6 +11,7 @@
 #include "assets/floor_lights.h"
 #include "assets/floor_collisions.h"
 #include "assets/messages.h"
+#include "save_file_manager.cpp"
 
 using namespace std;
 
@@ -18,10 +19,7 @@ using namespace std;
 
 // start of global structures
 
-typedef struct coord {
-    int x;
-    int y;
-}coord;
+
 
 vector<vector<short>>lightmap;
 
@@ -57,13 +55,7 @@ int FRAMES_OPTION = 3;
 
 // globals
 
-char player_icon = '@';
-coord player_pos;
-int current_room;
-int current_floor;
-int lighter_strength = 5; // 2
-bool took_torch = false;
-bool lighter_on = true;
+
 
 // keybinds
 
@@ -276,7 +268,7 @@ void move_player(int& in, vector<wstring>& room) {
     return;
 }
 
-// hud and game
+// ---------------- title screen and game -----------------
 
 void Game () {
 
@@ -293,7 +285,7 @@ void Game () {
     wrefresh(message_log);
 
     change_floor(0, msgs[LANG_OPTION]["Floor0Splash"]);
-    change_room(0, 2, 6);
+    change_room(0, player_pos.x, player_pos.y);
     
     unsigned int frame = 0;
 
@@ -448,8 +440,85 @@ void KeybindsMenu () {
     WINDOW* win = newwin(LINES,COLS,0,0);
     keypad(win, TRUE);
 
-    
+    vector<string> options = {
+        msgs[LANG_OPTION]["keybConfirm"],
+        msgs[LANG_OPTION]["keybToggleLighter"],
+        msgs[LANG_OPTION]["keybUp"],
+        msgs[LANG_OPTION]["keybDown"],
+        msgs[LANG_OPTION]["keybLeft"],
+        msgs[LANG_OPTION]["keybRight"],
+        msgs[LANG_OPTION]["optBack"]
+    };
 
+    vector<short> keybinds = {
+        keyConfirm,
+        keyToggleLighter,
+        keyUp,
+        keyDown,
+        keyLeft,
+        keyRight
+    };
+
+    int selected = 0, in, logo_offset = 7;
+
+    while(1) {
+        wclear(win);
+
+        for(int i = 0; i < logo.size(); i++) {
+            print_centered(win, (-logo_offset) + i, 0, logo[i]);
+        }
+
+        for(int i = 0; i < options.size(); i++) {
+            // selection indicator
+            if(i == selected) {
+                mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, ">");
+            }
+            else mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, " ");
+            
+            if(i == options.size()-1) {
+                mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s", options[i].c_str());
+            }
+            else mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s%d (%c)", options[i].c_str(), keybinds[i], keybinds[i]);
+        }
+
+        mvwprintw(win, LINES/2 - 2 + 2*options.size()+2, COLS/2 - 38, "%s", msgs[LANG_OPTION]["msgChanges"].c_str());
+
+        wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
+        wrefresh(win);
+        in = wgetch(win);
+        
+        if(in == keyDown) {
+            selected++;
+            selected%=options.size();
+        }
+        else if(in == keyUp) {
+            selected--;
+            if(selected == -1) selected = options.size()-1;
+            selected%=options.size();
+        }
+        else if(in == keyConfirm) {
+
+            if(selected == options.size()-1) {
+                keyConfirm = keybinds[0];
+                keyToggleLighter = keybinds[1];
+                keyUp = keybinds[2];
+                keyDown = keybinds[3];
+                keyLeft = keybinds[4];
+                keyRight = keybinds[5];
+                delwin(win);
+                return;
+            }
+            
+            mvwprintw(win, LINES/2 - 2 + 2*selected, COLS/2 - 38, "%s%s", options[selected].c_str(), "_                  ");
+            in = wgetch(win);
+            
+            keybinds[selected] = in;
+
+        }
+    }
+
+    
+    
     return;
 }
 
@@ -491,13 +560,12 @@ void Settings() {
         for(int i = 0; i < options.size(); i++) {
             // selection indicator
             if(i == selected) {
-                //print_centered(win, i * 2, -options[i].length()/2 - 2 , ">");
                 mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, ">");
             }
-            else mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, " ");//print_centered(win, i * 2, -options[i].length()/2 - 2, " ");
+            else mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, " ");
             
             if(i == 0) {
-                mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s%d", options[i].c_str(), fps_options[FRAMES_OPTION]);
+                mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s%d FPS", options[i].c_str(), fps_options[FRAMES_OPTION]);
             }
             if(i == 1) {
                 mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s%s", options[i].c_str(), language_options[LANG_OPTION].c_str());
@@ -517,6 +585,7 @@ void Settings() {
         }
         else if(in == keyUp) {
             selected--;
+            if(selected == -1) selected = options.size()-1;
             selected%=options.size();
         }
         else if(in == keyConfirm) {
@@ -538,6 +607,7 @@ void Settings() {
                 break;
 
                 case 3:
+                delwin(win);
                 return;
                 
             }
@@ -580,12 +650,10 @@ int TitleScreen(int start_selected) {
         for(int i = 0; i < options.size(); i++) {
             // selection indicator
             if(i == selected) {
-                //print_centered(win, i * 2, -options[i].length()/2 - 2 , ">");
                 mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, ">");
             }
-            else mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, " ");//print_centered(win, i * 2, -options[i].length()/2 - 2, " ");
-            
-            //print_centered(win, i * 2, 0, options[i].c_str());
+            else mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, " ");
+
             mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s", options[i].c_str());
         }
 
@@ -602,6 +670,7 @@ int TitleScreen(int start_selected) {
 
         if(in == keyUp) {
             selected--;
+            if(selected == -1) selected = options.size()-1;
             selected %= options.size();
         }
 
@@ -618,8 +687,6 @@ int main () {
     setlocale(LC_ALL, "");
 
     // ncurses initialization
-
-    
     initscr();
     cbreak();
     keypad(stdscr, TRUE);
@@ -632,11 +699,13 @@ int main () {
     init_pair(2, COLOR_BLACK + 8, COLOR_BLACK);
     init_pair(3, COLOR_WHITE, COLOR_BLACK);
 
-    int in;
+    int in = 0;
     int last_selection = 0;
 
+    load_save_file();
+
     while(1) {
-        in = TitleScreen(last_selection);
+        in = TitleScreen(in);
 
         switch(in) {
             case 0:

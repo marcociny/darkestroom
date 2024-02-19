@@ -19,8 +19,6 @@ using namespace std;
 
 // start of global structures
 
-
-
 vector<vector<short>>lightmap;
 
 list<pair<string,int>>message_log;
@@ -42,8 +40,6 @@ void Settings();
 void Game ();
 int main ();
 
-// start of global variables
-
 // default framerate
 float REFRESH_RATE = 16.666666;
 int FRAMES_PER_SECOND = (1000/REFRESH_RATE);
@@ -53,17 +49,11 @@ int FRAMES_PER_SECOND = (1000/REFRESH_RATE);
 int LANG_OPTION = 0;
 int FRAMES_OPTION = 3;
 
-// globals
-
-
-
 // keybinds
 
 char keyConfirm = 'z';
 char keyToggleLighter = 'x';
 short keyUp = KEY_UP, keyDown = KEY_DOWN, keyLeft = KEY_LEFT, keyRight = KEY_RIGHT;
-
-// start of game functions
 
 // -------------- message logs and printing --------------
 

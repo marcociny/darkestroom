@@ -10,8 +10,10 @@
 #include "assets/floor_art.h"
 #include "assets/floor_lights.h"
 #include "assets/floor_collisions.h"
+#include "assets/floor_events.h"
+#include "assets/floor_colors.h"
 #include "assets/messages.h"
-#include "save_file_manager.cpp"
+#include "assets/save_file_manager.cpp"
 
 using namespace std;
 
@@ -25,35 +27,23 @@ list<pair<string,int>>message_log;
 
 // function prototypes
 
-void print_centered(WINDOW* win, int line_offset, int col_offset, string str);
-void print_messages();
-void send_message(string line, int duration);
+void print_centered(WINDOW*, int, int, string);
+void print_messages(WINDOW*);
+void send_message(string, int);
 void clear_lightmap();
-void cast_light(int x, int y, int radius, int depth);
-void change_floor (int floor_number, string change_text);
-void change_room(int room_number, int x, int y);
-void event_handler(int room_n, int x, int y);
-void move_player(int& in, vector<string>& room);
-void HelpMenu ();
-int TitleScreen(int start_selected);
+int get_light_level(int, int);
+void _cast_light(int, int, int, int, vector<vector<int>>&);
+void cast_light(int, int, int);
+void change_floor (int, string);
+void change_room(int, int, int);
+void event_handler(int, int);
+void move_player(int&, vector<string>&);
+void Introduction();
+int TitleScreen(int);
+int PauseMenu();
 void Settings();
 void Game ();
 int main ();
-
-// default framerate
-float REFRESH_RATE = 16.666666;
-int FRAMES_PER_SECOND = (1000/REFRESH_RATE);
-
-// settings
-
-int LANG_OPTION = 0;
-int FRAMES_OPTION = 3;
-
-// keybinds
-
-char keyConfirm = 'z';
-char keyToggleLighter = 'x';
-short keyUp = KEY_UP, keyDown = KEY_DOWN, keyLeft = KEY_LEFT, keyRight = KEY_RIGHT;
 
 // -------------- message logs and printing --------------
 
@@ -192,44 +182,45 @@ void change_room(int room_number, int x, int y) {
 void event_handler(int x, int y) {
 
     auto& active_room = room[current_floor][current_room];
+    auto& room_collisions = floor_collisions[current_floor][current_room];
 
     bool canMove = true;
 
-    switch(current_floor) {
-        case 0:
-            switch(current_room) {
-                case 0:
-                if(x == 12 && y == 14) {
-                    
-                    if(active_room[14][12] == L'╲') {
-                        active_room[14][12] = L'╱';
-                        send_message(msgs[LANG_OPTION]["SwitchOn"], 60);
-                    }
-                    else if(active_room[14][12] == L'╱') {
-                        active_room[14][12] = L'╲';
-                        send_message(msgs[LANG_OPTION]["SwitchOff"], 60);
-                    }
-                    canMove = false;
-                }
-                if(x == 22 && y == 2) {
-                    wchar_t &c = active_room[y][x];
-                    if(c == L'╲') {
-                        c = L'╱';
-                        send_message(msgs[LANG_OPTION]["SwitchOff"], 60);
-                    }
-                    else if(c == L'╱') {
-                        c = L'╲';
-                        send_message(msgs[LANG_OPTION]["SwitchOn"], 60);
-                    }
-                    canMove = false;
-                }
-                break;
-            }
-        
-        case 1:
-            break;
+    wchar_t c;
+    switch(floor_events[current_floor][current_room][y][x]) {
+        case '.': break;
 
-        default:
+        case 'a':
+            
+            c = active_room[y][x];
+            if(c == L'╱') {
+                active_room[y][x] = L'╲';
+                send_message(msgs[LANG_OPTION]["SwitchOn"], 60);
+
+                active_room[10][12] = '.';
+                room_collisions[10][12] = '.';
+            }
+            else if(c == L'╲') {
+                active_room[y][x] = L'╱';
+                send_message(msgs[LANG_OPTION]["SwitchOff"], 60);
+
+                active_room[10][12] = L'─';
+                room_collisions[10][12] = 'X';
+            }
+            canMove = false;
+        break;
+
+        case 'b':
+            c = active_room[y][x];
+            if(c == L'╲') {
+                active_room[y][x] = L'╱';
+                send_message(msgs[LANG_OPTION]["SwitchOff"], 60);
+            }
+            else if(c == L'╱') {
+                active_room[y][x] = L'╲';
+                send_message(msgs[LANG_OPTION]["SwitchOn"], 60);
+            }
+            canMove = false;
         break;
     }
 
@@ -260,7 +251,35 @@ void move_player(int& in, vector<wstring>& room) {
 
 // ---------------- title screen and game -----------------
 
+void Introduction () {
+    WINDOW* txtbox = newwin(LINES,COLS,0,0);
+    wattron(txtbox, COLOR_PAIR(2));
+    print_centered(txtbox, -2, 0, msgs[LANG_OPTION]["IntroductoryText1"]);
+    print_centered(txtbox, 0, 0, msgs[LANG_OPTION]["IntroductoryText2"]);
+    print_centered(txtbox, 2, 0, msgs[LANG_OPTION]["IntroductoryText3"]);
+    print_centered(txtbox, 4, 0, msgs[LANG_OPTION]["IntroductoryText4"]);
+    wattroff(txtbox, COLOR_PAIR(2));
+
+    wborder(txtbox, '|', '|', '-', '-', '+', '+', '+', '+');
+    wrefresh(txtbox);
+    wgetch(txtbox);
+
+    
+
+    wclear(txtbox);
+    print_centered(txtbox, 0, 0, msgs[LANG_OPTION]["IntroductoryText5"]);
+    wborder(txtbox, '|', '|', '-', '-', '+', '+', '+', '+');
+    wgetch(txtbox);
+
+    delwin(txtbox);
+    return;
+}
+
 void Game () {
+
+    if(!load_save_file()) {
+        Introduction();
+    }
 
     WINDOW* win = newwin((int)LINES * 0.75, COLS,0,0); // screen
     nodelay(stdscr, TRUE);
@@ -273,9 +292,14 @@ void Game () {
 
     wrefresh(win);
     wrefresh(message_log);
+    
+    // terrible, but it works!!
+    string floor_splash = "Floor";
+    floor_splash += (char)current_floor+48;
+    floor_splash += "Splash";
 
-    change_floor(0, msgs[LANG_OPTION]["Floor0Splash"]);
-    change_room(0, player_pos.x, player_pos.y);
+    change_floor(current_floor, msgs[LANG_OPTION][floor_splash]);
+    change_room(current_room, player_pos.x, player_pos.y);
     
     unsigned int frame = 0;
 
@@ -307,7 +331,6 @@ void Game () {
 
         wclear(win);
 
-        // add lights and print map
         {
 
         auto& active_room = room[current_floor][current_room];
@@ -347,11 +370,41 @@ void Game () {
                     continue;
                 }
 
-                
+                int attr_number = -1;
+                switch(color_map[current_floor][current_room][i][j]) {
+                        case 'R':
+                        wattron(win, COLOR_PAIR(10+(lightmap[i][j]==3)*10));
+                        attr_number = 10+(lightmap[i][j]==3)*10;
+                        break;
+                        case 'G':
+                        wattron(win, COLOR_PAIR(11+(lightmap[i][j]==3)*10));
+                        attr_number = 11+(lightmap[i][j]==3)*10;
+                        break;
+                        case 'B':
+                        wattron(win, COLOR_PAIR(12+(lightmap[i][j]==3)*10));
+                        attr_number = 12+(lightmap[i][j]==3)*10;
+                        break;
+                        case 'Y':
+                        wattron(win, COLOR_PAIR(13)+(lightmap[i][j]==3)*10);
+                        attr_number = 13+(lightmap[i][j]==3)*10;
+                        break;
+                        case 'M':
+                        wattron(win, COLOR_PAIR(14)+(lightmap[i][j]==3)*10);
+                        attr_number = 14+(lightmap[i][j]==3)*10;
+                        break;
+                        case 'C':
+                        wattron(win, COLOR_PAIR(15+(lightmap[i][j]==3)*10));
+                        attr_number = 15+(lightmap[i][j]==3)*10;
+                        break;
+                        default:
+                        wattron(win, COLOR_PAIR(lightmap[i][j]));
+                        attr_number = lightmap[i][j];
+                        break;
+                }
 
-                wattron(win, COLOR_PAIR(lightmap[i][j]));
                 wprintw(win, "%lc", active_room[i][j]);
-                wattroff(win, COLOR_PAIR(lightmap[i][j]));
+                wattroff(win, attr_number);
+                
             }
             wprintw(win, "\n");
         }
@@ -385,13 +438,94 @@ void Game () {
         move_player(in, room[current_floor][current_room]);
 
         if(in == KEY_BACKSPACE) {
-            // pause menu
-            return;
+            if(PauseMenu()) {
+                delwin(win);
+                return;
+            }
         }
             
     }
 
     nodelay(stdscr, FALSE);
+
+}
+
+int PauseMenu () {
+    vector<string> options = {
+        msgs[LANG_OPTION]["Resume"],
+        msgs[LANG_OPTION]["Settings"],
+        msgs[LANG_OPTION]["Save"],
+        msgs[LANG_OPTION]["SaveAndExit"]
+    };
+
+    WINDOW* win = newwin(LINES,COLS,0,0);
+    keypad(win, TRUE);
+
+    int selected = 0, logo_offset = 7;
+    bool saved = false;
+
+    while(1) {
+
+        wclear(win);
+        if(saved) {
+            mvwprintw(win, LINES - 3, COLS - 10, "%s", msgs[LANG_OPTION]["Saved!"].c_str());
+            saved = false;
+        }
+
+        for(int i = 0; i < logo.size(); i++) {
+            print_centered(win, (-logo_offset) + i, 0, logo[i]);
+        }
+
+        for(int i = 0; i < options.size(); i++) {
+            if(i == selected) {
+                mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, ">");
+            }
+            else mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, " ");
+
+            mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s", options[i].c_str());
+        }
+
+        wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
+        wrefresh(win);
+
+        int in = wgetch(win);
+
+        if(in == KEY_BACKSPACE) {
+            delwin(win);
+            return 0;
+        }
+
+        if(in == keyConfirm) {
+            if(selected == 0) {
+                delwin(win);
+                return 0;
+            }
+            if(selected == 1) {
+                Settings();
+            }
+            if(selected == 2) {
+                save_to_file();
+                saved = true;
+            }
+            if(selected == 3) {
+                save_to_file();
+                delwin(win);
+                return 1;
+            }
+        }
+
+        if(in == keyUp) {
+            selected--;
+            if(selected == -1) selected = options.size()-1;
+            selected %= options.size();
+        }
+
+        if(in == keyDown) {
+            selected++;
+            selected %= options.size();
+        }
+    }
+
 
 }
 
@@ -615,7 +749,6 @@ int TitleScreen(int start_selected) {
 
     WINDOW* win = newwin(LINES,COLS,0,0);
     keypad(win, TRUE);
-    
 
     int in;
 
@@ -638,7 +771,6 @@ int TitleScreen(int start_selected) {
         }
 
         for(int i = 0; i < options.size(); i++) {
-            // selection indicator
             if(i == selected) {
                 mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, ">");
             }
@@ -652,7 +784,7 @@ int TitleScreen(int start_selected) {
 
         in = wgetch(win);
 
-        if(in == keyConfirm || in == KEY_ENTER || in == ' ') {
+        if(in == keyConfirm) {
             delwin(win);
             clear();
             return selected;
@@ -688,11 +820,20 @@ int main () {
     init_pair(1, COLOR_BLACK, COLOR_BLACK);
     init_pair(2, COLOR_BLACK + 8, COLOR_BLACK);
     init_pair(3, COLOR_WHITE, COLOR_BLACK);
+    init_pair(10, COLOR_RED, COLOR_BLACK);
+    init_pair(11, COLOR_GREEN, COLOR_BLACK);
+    init_pair(12, COLOR_BLUE, COLOR_BLACK);
+    init_pair(13, COLOR_YELLOW, COLOR_BLACK);
+    init_pair(14, COLOR_MAGENTA, COLOR_BLACK);
+    init_pair(15, COLOR_CYAN, COLOR_BLACK);
+    init_pair(20, COLOR_RED+8, COLOR_BLACK);
+    init_pair(21, COLOR_GREEN+8, COLOR_BLACK);
+    init_pair(22, COLOR_BLUE+8, COLOR_BLACK);
+    init_pair(23, COLOR_YELLOW+8, COLOR_BLACK);
+    init_pair(24, COLOR_MAGENTA+8, COLOR_BLACK);
+    init_pair(25, COLOR_CYAN+8, COLOR_BLACK);
 
     int in = 0;
-    int last_selection = 0;
-
-    load_save_file();
 
     while(1) {
         in = TitleScreen(in);
@@ -705,12 +846,10 @@ int main () {
             case 1:
                 // Settings
                 Settings();
-                last_selection = 1;
                 break;
             case 2:
                 // Credits
                 Credits();
-                last_selection = 2;
                 break;
             case 3:
                 // Quit

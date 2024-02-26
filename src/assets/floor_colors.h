@@ -2,9 +2,9 @@
 #include <string>
 using namespace std;
 
-// currently unused
+// {RGBYMC}
 
-vector<vector<vector<wstring>>> floor_lights = {
+vector<vector<vector<wstring>>> color_map = {
     // FLOOR 1
     {
         {

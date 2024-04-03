@@ -7,7 +7,9 @@ char player_icon = '@';
 coord player_pos = {4, 6};
 int current_room = 0;
 int current_floor = 0;
-int lighter_strength = 5;
+int lighter_strength = 6;
+float max_lighter_fuel = 20;
+float lighter_fuel = 20;
 bool lighter_on = true;
 
 float REFRESH_RATE = 16.666666;

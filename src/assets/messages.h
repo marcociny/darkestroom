@@ -38,6 +38,7 @@ vector<map<string, string>> msgs = {
         {"SaveAndExit", "Save and exit"},
         {"Save", "Save"},
         {"Saved!", "Saved!"},
+        {"Fuel", "Fuel:"},
     },
 
     // ITALIANO
@@ -72,5 +73,6 @@ vector<map<string, string>> msgs = {
         {"SaveAndExit", "Salva ed esci"},
         {"Save", "Salva"},
         {"Saved!", "Salvato!"},
+        {"Fuel", "Combustibile:"},
     },
 };

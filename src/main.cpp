@@ -7,13 +7,10 @@
 #include <ncurses.h>
 #include <locale.h>
 #include "assets/logo.h"
-#include "assets/floor_art.h"
-#include "assets/floor_lights.h"
-#include "assets/floor_collisions.h"
-#include "assets/floor_events.h"
-#include "assets/floor_colors.h"
 #include "assets/messages.h"
 #include "assets/save_file_manager.cpp"
+#include "assets/floor_loader.cpp"
+#include "assets/spinning_wheel.cpp"
 
 using namespace std;
 
@@ -89,7 +86,89 @@ int get_light_level(int depth, int radius) {
         else return 1;
 }
 
+// Directions:
+// 1 2 3
+// 4 0 5
+// 6 7 8
+void _cast_light2(int x, int y, int direction, int radius, int depth, vector<vector<int>>& visited) {
+    int light_level = get_light_level(depth, radius);
+    auto& active_room = floors[current_floor].room[current_room];
+
+    if(y < 0 || y >= active_room.art.size()) return;
+    if(x < 0 || x >= active_room.art[0].size()) return;
+
+    if(visited[y][x]) {
+        return;
+    }
+    visited[y][x] = true;
+
+    if(lightmap[y][x] < light_level) {
+        lightmap[y][x] = light_level;
+    }
+
+    if(active_room.collisions[y][x] == 'X') return;
+    if(depth >= radius) return;
+
+    switch(direction) {
+        case 0:
+        _cast_light2(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
+        _cast_light2(x, y-1, 2, radius, depth+1, visited);
+        _cast_light2(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
+
+        _cast_light2(x-1, y, 4, radius, depth+!(x%2), visited);
+        _cast_light2(x+1, y, 5, radius, depth+!(x%2), visited);
+        
+        _cast_light2(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
+        _cast_light2(x, y+1, 7, radius, depth+1, visited);
+        _cast_light2(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
+        return;
+
+        case 1:
+        _cast_light2(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
+        return;
+        
+        case 2:
+        _cast_light2(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
+        _cast_light2(x, y-1, 2, radius, depth+1, visited);
+        _cast_light2(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
+        return;
+
+        case 3:
+        _cast_light2(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
+        return;
+
+        case 4:
+        _cast_light2(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
+        _cast_light2(x-1, y, 4, radius, depth+!(x%2), visited);
+        _cast_light2(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
+        return;
+
+        case 5:
+        _cast_light2(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
+        _cast_light2(x+1, y, 5, radius, depth+!(x%2), visited);
+        _cast_light2(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
+        return;
+
+        case 6:
+        _cast_light2(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
+        return;
+
+        case 7:
+        _cast_light2(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
+        _cast_light2(x, y+1, 7, radius, depth+1, visited);
+        _cast_light2(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
+        return;
+
+        case 8:
+        _cast_light2(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
+        return;
+
+    }
+}
+
 void _cast_light(int x, int y, int radius, int depth, vector<vector<int>>& visited) {
+
+    auto& active_room = floors[current_floor].room[current_room];
 
     typedef struct node {
         int x, y, depth;
@@ -111,7 +190,7 @@ void _cast_light(int x, int y, int radius, int depth, vector<vector<int>>& visit
             lightmap[curr.y][curr.x] = light_level;
         }
 
-        if(floor_collisions[current_floor][current_room][curr.y][curr.x] == 'X') {
+        if(active_room.collisions[curr.y][curr.x] == 'X') {
             q.pop();
             continue;
         }
@@ -152,8 +231,9 @@ void _cast_light(int x, int y, int radius, int depth, vector<vector<int>>& visit
 }
 
 void cast_light(int x, int y, int radius) {
-    vector<vector<int>> visited(room[current_floor][current_room].size(), vector<int>(room[current_floor][current_room][0].size(), 0));
-    _cast_light(x, y, radius, 0, visited);
+    auto& active_room = floors[current_floor].room[current_room];
+    vector<vector<int>> visited(active_room.art.size(), vector<int>(active_room.art[0].size(), 0));
+    _cast_light2(x, y, 0, radius, 0, visited);
 }
 
 // -------- zone changes and event handler ---------------
@@ -173,7 +253,9 @@ void change_floor (int floor_number, string change_text) {
 
 void change_room(int room_number, int x, int y) {
     current_room = room_number;
-    lightmap.resize(room[current_floor][current_room].size(), vector<short>(room[current_floor][current_room][0].size()));
+    auto& active_room = floors[current_floor].room[current_room];
+
+    lightmap.resize(active_room.art.size(), vector<short>(active_room.art[0].size()));
     player_pos = {x,y};
 
     return;
@@ -181,50 +263,58 @@ void change_room(int room_number, int x, int y) {
 
 void event_handler(int x, int y) {
 
-    auto& active_room = room[current_floor][current_room];
-    auto& room_collisions = floor_collisions[current_floor][current_room];
+    auto& active_room = floors[current_floor].room[current_room];
+
+    if(x<0 || x > active_room.art[0].size()-1) return;
+    if(y<0 || y > active_room.art.size()-1) return;
 
     bool canMove = true;
 
     wchar_t c;
-    switch(floor_events[current_floor][current_room][y][x]) {
+    switch(active_room.events[y][x]) {
         case '.': break;
 
         case 'a':
             
-            c = active_room[y][x];
+            c = active_room.art[y][x];
             if(c == L'╱') {
-                active_room[y][x] = L'╲';
+                active_room.art[y][x] = L'╲';
                 send_message(msgs[LANG_OPTION]["SwitchOn"], 60);
 
-                active_room[10][12] = '.';
-                room_collisions[10][12] = '.';
+                active_room.art[10][12] = '.';
+                active_room.collisions[10][12] = '.';
             }
             else if(c == L'╲') {
-                active_room[y][x] = L'╱';
+                active_room.art[y][x] = L'╱';
                 send_message(msgs[LANG_OPTION]["SwitchOff"], 60);
 
-                active_room[10][12] = L'─';
-                room_collisions[10][12] = 'X';
+                active_room.art[10][12] = L'─';
+                active_room.collisions[10][12] = 'X';
             }
             canMove = false;
         break;
 
         case 'b':
-            c = active_room[y][x];
+            c = active_room.art[y][x];
             if(c == L'╲') {
-                active_room[y][x] = L'╱';
+                active_room.art[y][x] = L'╱';
                 send_message(msgs[LANG_OPTION]["SwitchOff"], 60);
+                for(int i = 5; i < 8; i++) {
+                    for(int j = 28; j < 35; j++) {
+                        active_room.art[i][j] = '=';
+                        active_room.collisions[i][j] = '.';
+                    }
+                }
             }
             else if(c == L'╱') {
-                active_room[y][x] = L'╲';
+                active_room.art[y][x] = L'╲';
                 send_message(msgs[LANG_OPTION]["SwitchOn"], 60);
             }
             canMove = false;
         break;
     }
 
-    if(floor_collisions[current_floor][current_room][y][x] != 'X' && floor_collisions[current_floor][current_room][y][x] != 'O' && canMove) {
+    if(active_room.collisions[y][x] != 'X' && active_room.collisions[y][x] != 'O' && canMove) {
         player_pos.x += (x - player_pos.x);
         player_pos.y += (y - player_pos.y);
     }
@@ -232,7 +322,7 @@ void event_handler(int x, int y) {
     return;
 }
 
-void move_player(int& in, vector<wstring>& room) {
+void move_player(int& in) {
     int x = 0, y = 0;
 
     if(in == keyLeft) x-=2;
@@ -293,10 +383,8 @@ void Game () {
     wrefresh(win);
     wrefresh(message_log);
     
-    // terrible, but it works!!
-    string floor_splash = "Floor";
-    floor_splash += (char)current_floor+48;
-    floor_splash += "Splash";
+
+    string floor_splash = "Floor"; floor_splash += (char)current_floor+48; floor_splash += "Splash";
 
     change_floor(current_floor, msgs[LANG_OPTION][floor_splash]);
     change_room(current_room, player_pos.x, player_pos.y);
@@ -305,8 +393,10 @@ void Game () {
 
     int in;
     int last_tick_lines = LINES, last_tick_cols = COLS;
+    wchar_t spinning_wheel = '/';
 
     while(1) {
+        // handle screen resizing
 
         if(last_tick_cols != COLS || last_tick_lines != LINES) {
             delwin(win);
@@ -320,7 +410,6 @@ void Game () {
 
             wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
         }
-
         if(frame%20 == 0) {
             last_tick_lines = LINES;
             last_tick_cols = COLS;
@@ -328,38 +417,53 @@ void Game () {
 
         napms(REFRESH_RATE);
         frame++;
-
         wclear(win);
 
+        // lighting and lighter fuel
         {
 
-        auto& active_room = room[current_floor][current_room];
+        auto& active_room = floors[current_floor].room[current_room];
+        int active_room_lines = active_room.art.size();
+        int active_room_cols = active_room.art[0].size();
 
         clear_lightmap();
 
         if(lighter_on) {
             cast_light(player_pos.x, player_pos.y, lighter_strength);
+            lighter_fuel -= 1.0/FRAMES_PER_SECOND;
+            if(lighter_fuel <= 0) {
+                lighter_on = false;
+            }
+        }
+        else {
+            lighter_fuel += 0.7/FRAMES_PER_SECOND;
+            lighter_fuel = min(lighter_fuel, max_lighter_fuel);
         }
 
-        for(int i = 0; i < active_room.size(); i++) {
-            for(int j = 0; j < active_room[i].size(); j++) {
+        for(int i = 0; i < active_room_lines; i++) {
+            for(int j = 0; j < active_room_cols; j++) {
 
-                if(floor_lights[current_floor][current_room][i][j] == 46) {
+                if(active_room.lights[i][j] == 46) {
                     continue;
                 }
 
-                if(floor_lights[current_floor][current_room][i][j]-48 > 0) {
-                    cast_light(j, i, floor_lights[current_floor][current_room][i][j]-48);
+                if(active_room.lights[i][j]-48 > 0) {
+                    cast_light(j, i, active_room.lights[i][j]-48);
                 }
 
             }
         }
         
-        for(int i = 0; i < active_room.size(); i++) {
-            for(int j = 0; j < active_room[i].size(); j++) {
+        for(int i = 0; i < active_room_lines; i++) {
+            
+            wmove(win, (LINES-active_room_lines-((int)LINES*0.25))/2+i, (COLS-active_room_cols)/2);
+
+            for(int j = 0; j < active_room_cols; j++) {
                 
                 if(lightmap[i][j] == 0) {
+                    wattron(win, COLOR_PAIR(1));
                     wprintw(win, " ");
+                    wattroff(win, COLOR_PAIR(1));
                     continue;
                 }
 
@@ -370,8 +474,8 @@ void Game () {
                     continue;
                 }
 
-                int attr_number = -1;
-                switch(color_map[current_floor][current_room][i][j]) {
+                int attr_number;
+                switch(active_room.colors[i][j]) {
                         case 'R':
                         wattron(win, COLOR_PAIR(10+(lightmap[i][j]==3)*10));
                         attr_number = 10+(lightmap[i][j]==3)*10;
@@ -402,7 +506,7 @@ void Game () {
                         break;
                 }
 
-                wprintw(win, "%lc", active_room[i][j]);
+                wprintw(win, "%lc", active_room.art[i][j]);
                 wattroff(win, attr_number);
                 
             }
@@ -414,17 +518,25 @@ void Game () {
 
         if(DEBUG_MODE == 1) {
             wprintw(win, "\n\n");
+            wattron(win, COLOR_PAIR(3));
             for(int i = 0; i < lightmap.size(); i++) {
                 for(int j = 0; j < lightmap[0].size(); j++) {
                     wprintw(win, "%d", lightmap[i][j]);
                 }
                 wprintw(win, "\n");
             }
+            wattroff(win, COLOR_PAIR(3));
             wprintw(win, "%d %d", lightmap.size(), lightmap[0].size());
         }
-
         if(DEBUG_MODE == 2) {
+            wattron(win, COLOR_PAIR(3));
             wprintw(win, "\n\nx: %d y: %d, frame %u, FPS = %d\n", player_pos.x, player_pos.y, frame, FRAMES_PER_SECOND);
+            wattroff(win, COLOR_PAIR(3));
+        }
+        if(DEBUG_MODE == 3) {
+            wattron(win, COLOR_PAIR(3));
+            wprintw(win, "\n\n%s\n", floors[current_floor].room[current_room].art[0].c_str());
+            wattroff(win, COLOR_PAIR(3));
         }
 
         wrefresh(win);
@@ -432,12 +544,41 @@ void Game () {
         wrefresh(message_log);
         wclear(message_log);
         print_messages(message_log);
+        mvwprintw(message_log, 2, COLS * 0.88, msgs[LANG_OPTION]["Fuel"].c_str());
+
+        if(frame % (FRAMES_PER_SECOND/4) == 0) {
+            if(lighter_on) {
+                spinning_wheel = spin_counterclockwise(spinning_wheel);
+            }
+
+        }
+        if(frame % (FRAMES_PER_SECOND/3) == 0) {
+            if(!lighter_on && lighter_fuel < max_lighter_fuel){
+                spinning_wheel = spin_clockwise(spinning_wheel);
+            } 
+        }
+
+        mvwprintw(message_log, 3, COLS * 0.88 - 2, "%lc", spinning_wheel);
+
+        for(int i = 0; i < max_lighter_fuel; i+=5) {
+            // █ ▓ ░ ▮▯
+            if(lighter_fuel - i <= 0) {
+                mvwprintw(message_log, 3, COLS * 0.88 + i/5, "░");
+            }
+            else if(lighter_fuel - i < 5) {
+                mvwprintw(message_log, 3, COLS * 0.88 + i/5, "█");
+            }
+            else if(lighter_fuel - i >= 5) {
+                mvwprintw(message_log, 3, COLS * 0.88 + i/5, "█");
+            }
+        }
+        
 
         in = getch();
 
-        move_player(in, room[current_floor][current_room]);
+        move_player(in);
 
-        if(in == KEY_BACKSPACE) {
+        if(in == 'p' || in == 'P') {
             if(PauseMenu()) {
                 delwin(win);
                 return;
@@ -818,8 +959,13 @@ int main () {
     
     // colors for lighting
     init_pair(1, COLOR_BLACK, COLOR_BLACK);
-    init_pair(2, COLOR_BLACK + 8, COLOR_BLACK);
+    init_pair(2, COLOR_BLACK+8, COLOR_BLACK);
     init_pair(3, COLOR_WHITE, COLOR_BLACK);
+    
+    init_pair(4, COLOR_BLACK, COLOR_BLACK);
+    init_pair(5, COLOR_BLACK, COLOR_BLACK+8);
+    init_pair(6, COLOR_BLACK, COLOR_WHITE);
+    
     init_pair(10, COLOR_RED, COLOR_BLACK);
     init_pair(11, COLOR_GREEN, COLOR_BLACK);
     init_pair(12, COLOR_BLUE, COLOR_BLACK);
@@ -833,32 +979,27 @@ int main () {
     init_pair(24, COLOR_MAGENTA+8, COLOR_BLACK);
     init_pair(25, COLOR_CYAN+8, COLOR_BLACK);
 
-    int in = 0;
+    load_floor(0);
 
     while(1) {
-        in = TitleScreen(in);
+        int in = TitleScreen(in);
 
         switch(in) {
             case 0:
-                // Play
                 Game();
                 break;
             case 1:
-                // Settings
                 Settings();
                 break;
             case 2:
-                // Credits
                 Credits();
                 break;
             case 3:
-                // Quit
                 endwin();
                 return 0;
         }
     }
     
-
     return 0;
 
 }

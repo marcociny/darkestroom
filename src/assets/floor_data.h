@@ -8,8 +8,10 @@ struct room_data {
     vector<wstring> colors;
     vector<wstring> events;
     vector<wstring> lights;
+    vector<wstring> entities;
 };
 
 struct floor_data {
     vector<room_data>room;
+    vector<string> layout;
 }floors[7];

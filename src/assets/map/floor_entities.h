@@ -4,7 +4,7 @@ using namespace std;
 
 
 
-vector<vector<vector<wstring>>> floor_lights_source = {
+vector<vector<vector<wstring>>> floor_entities_source = {
     // FLOOR 1
     {
         {

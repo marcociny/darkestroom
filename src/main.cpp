@@ -16,7 +16,7 @@ using namespace std;
 
 #define DEBUG_MODE 0
 
-// start of global structures
+// global structures
 
 vector<vector<short>>lightmap;
 
@@ -35,6 +35,8 @@ void change_floor (int, string);
 void change_room(int, int, int);
 void event_handler(int, int);
 void move_player(int&, vector<string>&);
+void add_lighter_fuel(int);
+void set_lighter_fuel(int);
 void Introduction();
 int TitleScreen(int);
 int PauseMenu();
@@ -236,7 +238,7 @@ void cast_light(int x, int y, int radius) {
     _cast_light2(x, y, 0, radius, 0, visited);
 }
 
-// -------- zone changes and event handler ---------------
+// ----------- zone changes and event handler ------------
 
 void change_floor (int floor_number, string change_text) {
     string floor_text = msgs[LANG_OPTION]["Floor"] + to_string(floor_number);
@@ -264,53 +266,59 @@ void change_room(int room_number, int x, int y) {
 void event_handler(int x, int y) {
 
     auto& active_room = floors[current_floor].room[current_room];
+    int active_room_lines = active_room.art.size();
+    int active_room_cols = active_room.art[0].size();
 
     if(x<0 || x > active_room.art[0].size()-1) return;
     if(y<0 || y > active_room.art.size()-1) return;
 
     bool canMove = true;
 
-    wchar_t c;
+    int new_room;
     switch(active_room.events[y][x]) {
         case '.': break;
 
-        case 'a':
-            
-            c = active_room.art[y][x];
-            if(c == L'╱') {
-                active_room.art[y][x] = L'╲';
-                send_message(msgs[LANG_OPTION]["SwitchOn"], 60);
+        case 'a': // move a room left
+            new_room = (int)floors[current_floor].layout[floor_layout_y][--floor_layout_x]-48;
+            change_room(new_room, active_room_cols-3, player_pos.y);
 
-                active_room.art[10][12] = '.';
-                active_room.collisions[10][12] = '.';
-            }
-            else if(c == L'╲') {
-                active_room.art[y][x] = L'╱';
-                send_message(msgs[LANG_OPTION]["SwitchOff"], 60);
-
-                active_room.art[10][12] = L'─';
-                active_room.collisions[10][12] = 'X';
-            }
-            canMove = false;
         break;
 
-        case 'b':
-            c = active_room.art[y][x];
-            if(c == L'╲') {
-                active_room.art[y][x] = L'╱';
-                send_message(msgs[LANG_OPTION]["SwitchOff"], 60);
-                for(int i = 5; i < 8; i++) {
-                    for(int j = 28; j < 35; j++) {
-                        active_room.art[i][j] = '=';
-                        active_room.collisions[i][j] = '.';
-                    }
-                }
-            }
-            else if(c == L'╱') {
-                active_room.art[y][x] = L'╲';
-                send_message(msgs[LANG_OPTION]["SwitchOn"], 60);
-            }
-            canMove = false;
+        case 'b': // move a room up
+            new_room = (int)floors[current_floor].layout[--floor_layout_y][floor_layout_x]-48;
+            change_room(new_room, player_pos.x, active_room_lines-2);
+
+        break;
+
+        case 'c': // move a room right
+            new_room = (int)floors[current_floor].layout[floor_layout_y][++floor_layout_x]-48;
+            change_room(new_room, 2, player_pos.y);
+
+        break;
+
+        case 'd': // move a room down
+            new_room = (int)floors[current_floor].layout[++floor_layout_y][floor_layout_x]-48;
+            change_room(new_room, player_pos.x, 2);
+            
+        break;
+
+        case '1':
+            lighter_fuel += 5;
+            lighter_fuel = min(lighter_fuel, max_lighter_fuel);
+            send_message("Picked up some lighter fuel.", 20);
+
+        break;
+
+        case '2':
+
+        break;
+
+        case '3':
+
+        break;
+
+        case '4':
+
         break;
     }
 
@@ -336,6 +344,20 @@ void move_player(int& in) {
     }
 
     event_handler(player_pos.x + x, player_pos.y + y);
+    return;
+}
+
+// -------------------- game functions --------------------
+
+void add_lighter_fuel(int val) {
+    lighter_fuel += val;
+    lighter_fuel = min(lighter_fuel, max_lighter_fuel);
+    return;
+}
+
+void set_lighter_fuel(int val) {
+    lighter_fuel = val;
+    lighter_fuel = min(lighter_fuel, max_lighter_fuel);
     return;
 }
 
@@ -430,13 +452,13 @@ void Game () {
 
         if(lighter_on) {
             cast_light(player_pos.x, player_pos.y, lighter_strength);
-            lighter_fuel -= 1.0/FRAMES_PER_SECOND;
+            lighter_fuel -= lighter_fuel_consumption/FRAMES_PER_SECOND;
             if(lighter_fuel <= 0) {
                 lighter_on = false;
             }
         }
         else {
-            lighter_fuel += 0.7/FRAMES_PER_SECOND;
+            lighter_fuel += lighter_fuel_regen/FRAMES_PER_SECOND;
             lighter_fuel = min(lighter_fuel, max_lighter_fuel);
         }
 
@@ -460,7 +482,7 @@ void Game () {
 
             for(int j = 0; j < active_room_cols; j++) {
                 
-                if(lightmap[i][j] == 0) {
+                if(lightmap[i][j] == 0 || lightmap[i][j] == 1) {
                     wattron(win, COLOR_PAIR(1));
                     wprintw(win, " ");
                     wattroff(win, COLOR_PAIR(1));
@@ -499,6 +521,10 @@ void Game () {
                         case 'C':
                         wattron(win, COLOR_PAIR(15+(lightmap[i][j]==3)*10));
                         attr_number = 15+(lightmap[i][j]==3)*10;
+                        break;
+                        case 'g':
+                        wattron(win, COLOR_PAIR(2));
+                        attr_number = 2;
                         break;
                         default:
                         wattron(win, COLOR_PAIR(lightmap[i][j]));
@@ -546,13 +572,17 @@ void Game () {
         print_messages(message_log);
         mvwprintw(message_log, 2, COLS * 0.88, msgs[LANG_OPTION]["Fuel"].c_str());
 
-        if(frame % (FRAMES_PER_SECOND/4) == 0) {
+        int consumption_speed = FRAMES_PER_SECOND/(lighter_fuel_consumption*4);
+        int regen_speed = (FRAMES_PER_SECOND/(lighter_fuel_regen*4));
+
+        if(frame % (consumption_speed == 0 ? 1 : consumption_speed) == 0) {
             if(lighter_on) {
                 spinning_wheel = spin_counterclockwise(spinning_wheel);
             }
 
         }
-        if(frame % (FRAMES_PER_SECOND/3) == 0) {
+
+        if(frame % (regen_speed == 0 ? 1 : consumption_speed) == 0) {
             if(!lighter_on && lighter_fuel < max_lighter_fuel){
                 spinning_wheel = spin_clockwise(spinning_wheel);
             } 

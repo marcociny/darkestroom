@@ -9,6 +9,7 @@ struct room_data {
     vector<wstring> events;
     vector<wstring> lights;
     vector<wstring> entities;
+    vector<wstring> pickups;
 };
 
 struct floor_data {

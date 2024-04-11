@@ -5,6 +5,7 @@ typedef struct coord {
 
 char player_icon = '@';
 coord player_pos = {4, 6};
+bool movement_lock = false;
 
 int current_room;
 int current_floor = 0;

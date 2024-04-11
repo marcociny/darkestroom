@@ -33,8 +33,12 @@ void _cast_light(int, int, int, int, vector<vector<int>>&);
 void cast_light(int, int, int);
 void change_floor (int, string);
 void change_room(int, int, int);
+void reset_tile(int, int);
 void event_handler(int, int);
 void move_player(int&, vector<string>&);
+void spawn_pickup(pickup, int, int, int);
+void lock_movement();
+void unlock_movement();
 void add_lighter_fuel(int);
 void set_lighter_fuel(int);
 void Introduction();
@@ -241,6 +245,7 @@ void cast_light(int x, int y, int radius) {
 // ----------- zone changes and event handler ------------
 
 void change_floor (int floor_number, string change_text) {
+
     string floor_text = msgs[LANG_OPTION]["Floor"] + to_string(floor_number);
     current_floor = floor_number;
     WINDOW* txtbox = newwin(LINES,COLS,0,0);
@@ -249,7 +254,9 @@ void change_floor (int floor_number, string change_text) {
     wborder(txtbox, '|', '|', '-', '-', '+', '+', '+', '+');
     wrefresh(txtbox);
     napms(2300);
+    
     delwin(txtbox);
+    
     return;
 }
 
@@ -261,6 +268,15 @@ void change_room(int room_number, int x, int y) {
     player_pos = {x,y};
 
     return;
+}
+
+void reset_tile(int x, int y) {
+    auto& r = floors[current_floor].room[current_room];
+
+    r.art[y][x] = floor_art_source[current_floor][current_room][y][x];
+    r.colors[y][x] = floor_colors_source[current_floor][current_room][y][x];
+    r.events[y][x] = floor_events_source[current_floor][current_room][y][x];
+    r.pickups[y][x] = floor_pickups_source[current_floor][current_room][y][x];
 }
 
 void event_handler(int x, int y) {
@@ -303,13 +319,16 @@ void event_handler(int x, int y) {
         break;
 
         case '1':
-            lighter_fuel += 5;
-            lighter_fuel = min(lighter_fuel, max_lighter_fuel);
-            send_message("Picked up some lighter fuel.", 20);
+
+            add_lighter_fuel(5);
+            send_message("Picked up some lighter fuel.", 4*FRAMES_PER_SECOND);
+            reset_tile(x, y);
 
         break;
 
         case '2':
+
+            
 
         break;
 
@@ -331,6 +350,9 @@ void event_handler(int x, int y) {
 }
 
 void move_player(int& in) {
+
+    if(movement_lock) return;
+
     int x = 0, y = 0;
 
     if(in == keyLeft) x-=2;
@@ -347,7 +369,18 @@ void move_player(int& in) {
     return;
 }
 
+
 // -------------------- game functions --------------------
+
+void spawn_pickup(pickup p, int x, int y, int room_n) {
+    auto& r = floors[current_floor].room[room_n];
+
+    r.art[y][x] = p.icon;
+    r.colors[y][x] = p.color;
+    r.events[y][x] = p.ID;
+    r.pickups[y][x] = p.type;
+
+}
 
 void add_lighter_fuel(int val) {
     lighter_fuel += val;
@@ -361,9 +394,18 @@ void set_lighter_fuel(int val) {
     return;
 }
 
+void lock_movement() {
+    movement_lock = true; return;
+}
+
+void unlock_movement() {
+    movement_lock = false; return;
+}
+
 // ---------------- title screen and game -----------------
 
 void Introduction () {
+    
     WINDOW* txtbox = newwin(LINES,COLS,0,0);
     wattron(txtbox, COLOR_PAIR(2));
     print_centered(txtbox, -2, 0, msgs[LANG_OPTION]["IntroductoryText1"]);
@@ -384,6 +426,7 @@ void Introduction () {
     wgetch(txtbox);
 
     delwin(txtbox);
+    
     return;
 }
 
@@ -410,6 +453,8 @@ void Game () {
 
     change_floor(current_floor, msgs[LANG_OPTION][floor_splash]);
     change_room(current_room, player_pos.x, player_pos.y);
+
+    spawn_pickup(lighter_fuel_pickup, 20, 10, 4);
     
     unsigned int frame = 0;
 

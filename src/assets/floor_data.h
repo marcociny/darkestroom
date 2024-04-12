@@ -7,9 +7,9 @@ struct room_data {
     vector<wstring> collisions;
     vector<wstring> colors;
     vector<wstring> events;
-    vector<wstring> lights;
     vector<wstring> entities;
-    vector<wstring> pickups;
+    vector<string> lights;
+    vector<string> pickups;
 };
 
 struct floor_data {

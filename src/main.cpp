@@ -26,7 +26,7 @@ list<pair<string,int>>message_log;
 
 void print_centered(WINDOW*, int, int, string);
 void print_messages(WINDOW*);
-void send_message(string, int);
+void send_message(char*, int);
 void clear_lightmap();
 int get_light_level(int, int);
 void _cast_light(int, int, int, int, vector<vector<int>>&);
@@ -70,9 +70,14 @@ void print_messages(WINDOW* win) {
     wattroff(win, A_BOLD);
 }
 
-void send_message(string line, int duration) {
+void send_message(const char* line, int duration) {
     message_log.push_back({line, duration});
 }
+
+void send_message(char* line, int duration) {
+    message_log.push_back({line, duration});
+}
+
 
 // ---------------------- lightmap ----------------------
 
@@ -317,6 +322,7 @@ void event_handler(int x, int y) {
             change_room(new_room, player_pos.x, 2);
             
         break;
+        
 
         case '1':
 
@@ -327,9 +333,13 @@ void event_handler(int x, int y) {
         break;
 
         case '2':
+            {
+            char* s;
+            sprintf(s, "Picked up note number %d.", (int)active_room.pickups[y][x]);
 
-            
-
+            send_message(s, 4*FRAMES_PER_SECOND);
+            reset_tile(x, y);
+            }
         break;
 
         case '3':
@@ -406,26 +416,27 @@ void unlock_movement() {
 
 void Introduction () {
     
-    WINDOW* txtbox = newwin(LINES,COLS,0,0);
-    wattron(txtbox, COLOR_PAIR(2));
-    print_centered(txtbox, -2, 0, msgs[LANG_OPTION]["IntroductoryText1"]);
-    print_centered(txtbox, 0, 0, msgs[LANG_OPTION]["IntroductoryText2"]);
-    print_centered(txtbox, 2, 0, msgs[LANG_OPTION]["IntroductoryText3"]);
-    print_centered(txtbox, 4, 0, msgs[LANG_OPTION]["IntroductoryText4"]);
-    wattroff(txtbox, COLOR_PAIR(2));
+    //wip
+    //WINDOW* txtbox = newwin(LINES,COLS,0,0);
+    //wattron(txtbox, COLOR_PAIR(2));
+    //print_centered(txtbox, -2, 0, msgs[LANG_OPTION]["IntroductoryText1"]);
+    //print_centered(txtbox, 0, 0, msgs[LANG_OPTION]["IntroductoryText2"]);
+    //print_centered(txtbox, 2, 0, msgs[LANG_OPTION]["IntroductoryText3"]);
+    //print_centered(txtbox, 4, 0, msgs[LANG_OPTION]["IntroductoryText4"]);
+    //wattroff(txtbox, COLOR_PAIR(2));
 
-    wborder(txtbox, '|', '|', '-', '-', '+', '+', '+', '+');
-    wrefresh(txtbox);
-    wgetch(txtbox);
+    //wborder(txtbox, '|', '|', '-', '-', '+', '+', '+', '+');
+    //wrefresh(txtbox);
+    //wgetch(txtbox);
 
     
 
-    wclear(txtbox);
-    print_centered(txtbox, 0, 0, msgs[LANG_OPTION]["IntroductoryText5"]);
-    wborder(txtbox, '|', '|', '-', '-', '+', '+', '+', '+');
-    wgetch(txtbox);
+    //wclear(txtbox);
+    //print_centered(txtbox, 0, 0, msgs[LANG_OPTION]["IntroductoryText5"]);
+    //wborder(txtbox, '|', '|', '-', '-', '+', '+', '+', '+');
+    //wgetch(txtbox);
 
-    delwin(txtbox);
+    //delwin(txtbox);
     
     return;
 }
@@ -455,6 +466,11 @@ void Game () {
     change_room(current_room, player_pos.x, player_pos.y);
 
     spawn_pickup(lighter_fuel_pickup, 20, 10, 4);
+    spawn_pickup(note_pickup[1], 20, 7, 4);
+    spawn_pickup(note_pickup[2], 20, 6, 4);
+    spawn_pickup(note_pickup[3], 20, 5, 4);
+    spawn_pickup(note_pickup[4], 20, 4, 4);
+    spawn_pickup(note_pickup[9], 20, 3, 4);
     
     unsigned int frame = 0;
 

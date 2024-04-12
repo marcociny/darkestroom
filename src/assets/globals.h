@@ -17,7 +17,7 @@ int floor_layout_y = 1;
 float max_lighter_fuel = 20;
 float lighter_fuel = 20;
 
-float lighter_fuel_regen = 30;//0.7;
+float lighter_fuel_regen = 0.7;
 float lighter_fuel_consumption = 1.0;
 
 bool lighter_on = true;

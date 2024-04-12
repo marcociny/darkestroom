@@ -25,4 +25,4 @@ and finally compile by entering the directory where *main.cpp* is located and ru
 
 `g++ main.c -o darkestroom.exe -lncurses -DNCURSES_STATIC`
 
-Now, if you've done everything right, you should have the executable!
+Now, if you've done everything right, you should have the executable file in the same directory!

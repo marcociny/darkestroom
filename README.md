@@ -1,5 +1,5 @@
 # Darkest Room
-Adventure game made in ncurses.
+2D dungeon crawler game made in ncurses.
 
 # Installation
 

@@ -14,11 +14,14 @@ int lighter_strength = 6;
 int floor_layout_x = 1;
 int floor_layout_y = 1;
 
+int health = 20;
+int max_health = 20;
+
 float max_lighter_fuel = 20;
 float lighter_fuel = 20;
 
 float lighter_fuel_regen = 0.7;
-float lighter_fuel_consumption = 1.0;
+float lighter_fuel_consumption = 0.1;//1.0;
 
 bool lighter_on = true;
 

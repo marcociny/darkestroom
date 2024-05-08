@@ -14,7 +14,7 @@
 
 using namespace std;
 
-#define DEBUG_MODE 0
+#define DEBUG_MODE 0 // 0 - 4
 
 // global structures
 
@@ -36,16 +36,20 @@ void change_room(int, int, int);
 void reset_tile(int, int);
 void event_handler(int, int);
 void move_player(int&, vector<string>&);
-void spawn_pickup(pickup, int, int, int);
+int spawn_pickup(pickup, int, int, int, int);
 void lock_movement();
 void unlock_movement();
+void death_sequence();
+void win_sequence();
 void add_lighter_fuel(int);
 void set_lighter_fuel(int);
+void add_health(int);
+void set_health(int);
 void Introduction();
 int TitleScreen(int);
 int PauseMenu();
 void Settings();
-void Game ();
+int Game ();
 int main ();
 
 // -------------- message logs and printing --------------
@@ -296,6 +300,8 @@ void event_handler(int x, int y) {
     bool canMove = true;
 
     int new_room;
+    char* s = (char*)malloc(128 * sizeof(char));
+    int item_type = active_room.pickups[y][x];
     switch(active_room.events[y][x]) {
         case '.': break;
 
@@ -326,27 +332,44 @@ void event_handler(int x, int y) {
 
         case '1':
 
-            add_lighter_fuel(5);
-            send_message("Picked up some lighter fuel.", 4*FRAMES_PER_SECOND);
+            add_lighter_fuel( item_type );
+            snprintf(s, 128, "Picked up some lighter fuel (%d).", item_type);
+            send_message(s, 4*FRAMES_PER_SECOND);
             reset_tile(x, y);
 
         break;
 
         case '2':
-            {
-            char* s;
-            sprintf(s, "Picked up note number %d.", (int)active_room.pickups[y][x]);
 
+            snprintf(s, 128, "Picked up note number %d.", item_type);
             send_message(s, 4*FRAMES_PER_SECOND);
             reset_tile(x, y);
-            }
+
         break;
 
         case '3':
 
+            snprintf(s, 128, "Used a band-aid (+%d health)", item_type);
+            add_health(item_type);
+            send_message(s, 4*FRAMES_PER_SECOND);
+            reset_tile(x, y);
+
         break;
 
         case '4':
+
+            snprintf(s, 128, "Used a medkit. (+%d health)", item_type);
+            add_health(item_type);
+            send_message(s, 4*FRAMES_PER_SECOND);
+            reset_tile(x, y);
+
+        break;
+
+        case '5':
+
+            health -= item_type;
+            snprintf(s, 128, "Ow! Stepped on a spike (-%d)", item_type);
+            send_message(s, 4*FRAMES_PER_SECOND);
 
         break;
     }
@@ -379,16 +402,105 @@ void move_player(int& in) {
     return;
 }
 
-
 // -------------------- game functions --------------------
 
-void spawn_pickup(pickup p, int x, int y, int room_n) {
+void death_sequence() {
+    WINDOW* win = newwin(LINES, COLS, 0, 0);
+    keypad(win, true);
+
+    wbkgd(win, COLOR_PAIR(7));
+    wrefresh(win);
+    napms(1500);
+
+    wbkgd(win, COLOR_PAIR(3));
+    print_centered(win, -5, 0, "You lost!");
+    wrefresh(win);
+    napms(1000);
+    print_centered(win, -3, 0, "Died from: ?");
+    wrefresh(win);
+    napms(1000);
+    print_centered(win, -1, 0, "Score: ?");
+    wrefresh(win);
+    napms(1000);
+    print_centered(win, 1, 0, "Press any key to continue");
+    flushinp();
+    wgetch(win);
+
+
+    delwin(win);
+
+    return;
+}
+
+// TBD
+void win_sequence() {
+    return;
+}
+
+void init_floor_pickups(int floor_n) {
+
+    auto active_floor = floors[current_floor];
+    
+
+    switch(floor_n) {
+
+        case 0:
+
+            // spawn:
+            // 10 notes
+            // 12 lighter fuel
+            // 60-120 spikes
+
+            int rand_room, rand_line, rand_col;
+            for(int i = 0; i < 120; i++) {
+                rand_room = rand()%active_floor.room.size();
+                rand_line = 1 + (rand() % (active_floor.room[rand_room].art.size()-1 ) );
+                rand_col = 2 + 2 * (rand() % (active_floor.room[rand_room].art[0].size()/2 - 1 ) );
+                if(spawn_pickup(spike_object, i, rand_col, rand_line, rand_room) != 0) {
+                    i--;
+                }
+            }
+            for(int i = 0; i < 10; i++) {
+                rand_room = rand()%active_floor.room.size();
+                rand_line = 1 + (rand() % (active_floor.room[rand_room].art.size()-1 ) );
+                rand_col = 2 + 2 * (rand() % (active_floor.room[rand_room].art[0].size()/2 - 1 ) );
+                if(spawn_pickup(note_pickup, i, rand_col, rand_line, rand_room) != 0) {
+                    i--;
+                }
+            }
+
+            for(int i = 0; i < 12; i++) {
+                rand_room = rand()%active_floor.room.size();
+                rand_line = 1 + (rand() % (active_floor.room[rand_room].art.size()-1 ) );
+                rand_col = 2 + 2 * (rand() % (active_floor.room[rand_room].art[0].size()/2 - 1 ) );
+                if(spawn_pickup(lighter_fuel_pickup, i, rand_col, rand_line, rand_room) != 0) {
+                    i--;
+                }
+            }
+
+        break;
+
+        case 2:
+            return;
+        break;
+
+    }
+
+}
+
+int spawn_pickup(pickup p, int type, int x, int y, int room_n) {
     auto& r = floors[current_floor].room[room_n];
+
+    if(r.pickups[y][x] != ' ' && r.pickups[y][x] != '.') {
+        return -1;
+    }
 
     r.art[y][x] = p.icon;
     r.colors[y][x] = p.color;
     r.events[y][x] = p.ID;
-    r.pickups[y][x] = p.type;
+    r.pickups[y][x] = type;
+
+    return 0;
 
 }
 
@@ -398,9 +510,15 @@ void add_lighter_fuel(int val) {
     return;
 }
 
-void set_lighter_fuel(int val) {
-    lighter_fuel = val;
-    lighter_fuel = min(lighter_fuel, max_lighter_fuel);
+void add_health(int val) {
+    health += val;
+    health = min(health, max_health);
+    return;
+}
+
+void set_health(int val) {
+    health = val;
+    health = min(health, max_health);
     return;
 }
 
@@ -441,7 +559,7 @@ void Introduction () {
     return;
 }
 
-void Game () {
+int Game () {
 
     if(!load_save_file()) {
         Introduction();
@@ -465,12 +583,7 @@ void Game () {
     change_floor(current_floor, msgs[LANG_OPTION][floor_splash]);
     change_room(current_room, player_pos.x, player_pos.y);
 
-    spawn_pickup(lighter_fuel_pickup, 20, 10, 4);
-    spawn_pickup(note_pickup[1], 20, 7, 4);
-    spawn_pickup(note_pickup[2], 20, 6, 4);
-    spawn_pickup(note_pickup[3], 20, 5, 4);
-    spawn_pickup(note_pickup[4], 20, 4, 4);
-    spawn_pickup(note_pickup[9], 20, 3, 4);
+    init_floor_pickups(current_floor);
     
     unsigned int frame = 0;
 
@@ -478,7 +591,14 @@ void Game () {
     int last_tick_lines = LINES, last_tick_cols = COLS;
     wchar_t spinning_wheel = '/';
 
+    flushinp();
+
     while(1) {
+
+        if(health <= 0) {
+            return 1;
+        }
+
         // handle screen resizing
 
         if(last_tick_cols != COLS || last_tick_lines != LINES) {
@@ -625,60 +745,83 @@ void Game () {
             wprintw(win, "\n\n%s\n", floors[current_floor].room[current_room].art[0].c_str());
             wattroff(win, COLOR_PAIR(3));
         }
+        if(DEBUG_MODE == 4) {
+            mvwprintw(message_log, 2, COLS * 0.91, "%f", lighter_fuel);
+            mvwprintw(message_log, 2, COLS * 0.20, "%d", in);
+        }
 
         wrefresh(win);
         wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
         wrefresh(message_log);
         wclear(message_log);
         print_messages(message_log);
-        mvwprintw(message_log, 2, COLS * 0.88, msgs[LANG_OPTION]["Fuel"].c_str());
 
-        int consumption_speed = FRAMES_PER_SECOND/(lighter_fuel_consumption*4);
-        int regen_speed = (FRAMES_PER_SECOND/(lighter_fuel_regen*4));
+        // lighter fuel and health GUI
+        {
+            mvwprintw(message_log, 2, COLS * 0.88, msgs[LANG_OPTION]["Fuel"].c_str());
+            int consumption_speed = FRAMES_PER_SECOND/(lighter_fuel_consumption*4);
+            int regen_speed = (FRAMES_PER_SECOND/(lighter_fuel_regen*4));
 
-        if(frame % (consumption_speed == 0 ? 1 : consumption_speed) == 0) {
-            if(lighter_on) {
-                spinning_wheel = spin_counterclockwise(spinning_wheel);
+            if(frame % (consumption_speed == 0 ? 1 : consumption_speed) == 0) {
+                if(lighter_on) {
+                    spinning_wheel = spin_counterclockwise(spinning_wheel);
+                }
+
+            }
+
+            if(frame % (regen_speed == 0 ? 1 : consumption_speed) == 0) {
+                if(!lighter_on && lighter_fuel < max_lighter_fuel){
+                    spinning_wheel = spin_clockwise(spinning_wheel);
+                } 
+            }
+
+            mvwprintw(message_log, 2, COLS * 0.88 - 2, "%lc", spinning_wheel);
+
+            for(int i = 0; i < max_lighter_fuel; i+=5) {
+                // █ ▓ ░ ▮▯
+                if(lighter_fuel - i <= 0) {
+                    mvwprintw(message_log, 3, COLS * 0.88 + i/5, "░");
+                }
+                else if(lighter_fuel - i < 5) {
+                    mvwprintw(message_log, 3, COLS * 0.88 + i/5, "█");
+                }
+                else if(lighter_fuel - i >= 5) {
+                    mvwprintw(message_log, 3, COLS * 0.88 + i/5, "█");
+                }
+            }
+
+            mvwprintw(message_log, 6, COLS * 0.88, msgs[LANG_OPTION]["Health"].c_str());
+            for(int i = 0; i < max_health; i+=5) {
+                if(health - i <= 0) {
+                    mvwprintw(message_log, 7, COLS * 0.88 + i/5, "░");
+                }
+                else if(health - i < 5) {
+                    mvwprintw(message_log, 7, COLS * 0.88 + i/5, "█");
+                }
+                else if(health - i >= 5) {
+                    mvwprintw(message_log, 7, COLS * 0.88 + i/5, "█");
+                }
             }
 
         }
-
-        if(frame % (regen_speed == 0 ? 1 : consumption_speed) == 0) {
-            if(!lighter_on && lighter_fuel < max_lighter_fuel){
-                spinning_wheel = spin_clockwise(spinning_wheel);
-            } 
-        }
-
-        mvwprintw(message_log, 3, COLS * 0.88 - 2, "%lc", spinning_wheel);
-
-        for(int i = 0; i < max_lighter_fuel; i+=5) {
-            // █ ▓ ░ ▮▯
-            if(lighter_fuel - i <= 0) {
-                mvwprintw(message_log, 3, COLS * 0.88 + i/5, "░");
-            }
-            else if(lighter_fuel - i < 5) {
-                mvwprintw(message_log, 3, COLS * 0.88 + i/5, "█");
-            }
-            else if(lighter_fuel - i >= 5) {
-                mvwprintw(message_log, 3, COLS * 0.88 + i/5, "█");
-            }
-        }
-        
 
         in = getch();
-
-        move_player(in);
+        if(in != -1) {
+            move_player(in);
+        }
 
         if(in == 'p' || in == 'P') {
             if(PauseMenu()) {
                 delwin(win);
-                return;
+                return 0;
             }
         }
             
     }
 
     nodelay(stdscr, FALSE);
+
+    return -1;
 
 }
 
@@ -1048,6 +1191,9 @@ int main () {
     curs_set(0);
     start_color();
     
+    // random seed (might move)
+    srand(time(0));
+    
     // colors for lighting
     init_pair(1, COLOR_BLACK, COLOR_BLACK);
     init_pair(2, COLOR_BLACK+8, COLOR_BLACK);
@@ -1056,6 +1202,7 @@ int main () {
     init_pair(4, COLOR_BLACK, COLOR_BLACK);
     init_pair(5, COLOR_BLACK, COLOR_BLACK+8);
     init_pair(6, COLOR_BLACK, COLOR_WHITE);
+    init_pair(7, COLOR_BLACK, COLOR_RED); // for death sequence
     
     init_pair(10, COLOR_RED, COLOR_BLACK);
     init_pair(11, COLOR_GREEN, COLOR_BLACK);
@@ -1072,12 +1219,20 @@ int main () {
 
     load_floor(0);
 
+    int in = 0, res;
+
     while(1) {
-        int in = TitleScreen(in);
+        in = TitleScreen(in);
 
         switch(in) {
             case 0:
-                Game();
+                res = Game(); 
+                if(res == 1) {
+                    death_sequence();
+                }
+                else if (res == 2){
+                    win_sequence();
+                }
                 break;
             case 1:
                 Settings();

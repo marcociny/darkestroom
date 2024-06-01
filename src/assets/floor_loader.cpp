@@ -28,7 +28,9 @@ void load_floor(int floor_n) {
         floors[floor_n].room[i].pickups = floor_pickups_source[floor_n][i];
     }
 
-    current_room = (int)floors[floor_n].layout[floor_layout_y][floor_layout_x]-48;
+    current_room = floor_starting_rooms[floor_n];
+    player_pos.x = floor_starting_x[floor_n];
+    player_pos.y = floor_starting_y[floor_n];
 
     return;
 }

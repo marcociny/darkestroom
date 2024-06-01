@@ -4,7 +4,7 @@ typedef struct coord {
 }coord;
 
 char player_icon = '@';
-coord player_pos = {4, 6};
+coord player_pos = {4, 10};
 bool movement_lock = false;
 
 int current_room;

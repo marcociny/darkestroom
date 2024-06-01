@@ -14,7 +14,7 @@
 
 using namespace std;
 
-#define DEBUG_MODE 0 // 0 - 4
+#define DEBUG_MODE 4 // 0 - 4
 
 // global structures
 
@@ -473,7 +473,7 @@ void init_floor_pickups(int floor_n) {
                 rand_room = rand()%active_floor.room.size();
                 rand_line = 1 + (rand() % (active_floor.room[rand_room].art.size()-1 ) );
                 rand_col = 2 + 2 * (rand() % (active_floor.room[rand_room].art[0].size()/2 - 1 ) );
-                if(spawn_pickup(lighter_fuel_pickup, i, rand_col, rand_line, rand_room) != 0) {
+                if(spawn_pickup(lighter_fuel_pickup, 3, rand_col, rand_line, rand_room) != 0) {
                     i--;
                 }
             }
@@ -568,16 +568,12 @@ int Game () {
     WINDOW* win = newwin((int)LINES * 0.75, COLS,0,0); // screen
     nodelay(stdscr, TRUE);
     keypad(win, TRUE);
-
     WINDOW* message_log = newwin((int)LINES * 0.25, (int)COLS,LINES * 0.75, 0);
-
     wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
     wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
-
     wrefresh(win);
     wrefresh(message_log);
     
-
     string floor_splash = "Floor"; floor_splash += (char)current_floor+48; floor_splash += "Splash";
 
     change_floor(current_floor, msgs[LANG_OPTION][floor_splash]);
@@ -600,7 +596,6 @@ int Game () {
         }
 
         // handle screen resizing
-
         if(last_tick_cols != COLS || last_tick_lines != LINES) {
             delwin(win);
             delwin(message_log);
@@ -621,7 +616,7 @@ int Game () {
         napms(REFRESH_RATE);
         frame++;
         wclear(win);
-
+        
         // lighting and lighter fuel
         {
 
@@ -748,8 +743,10 @@ int Game () {
         if(DEBUG_MODE == 4) {
             mvwprintw(message_log, 2, COLS * 0.91, "%f", lighter_fuel);
             mvwprintw(message_log, 2, COLS * 0.20, "%d", in);
+            mvwprintw(message_log, 2, COLS * 0.25, "%d", current_room);
         }
 
+        wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
         wrefresh(win);
         wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
         wrefresh(message_log);
@@ -816,7 +813,7 @@ int Game () {
                 return 0;
             }
         }
-            
+           
     }
 
     nodelay(stdscr, FALSE);

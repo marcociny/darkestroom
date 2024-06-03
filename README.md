@@ -1,5 +1,5 @@
 # Darkest Room
-2D dungeon crawler game made in ncurses.
+Darkest Room is an ASCII dungeon crawler game written in C++ with the use of the ncurses library.
 
 # Installation
 

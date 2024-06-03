@@ -2,7 +2,8 @@
 #include <string>
 using namespace std;
 
-struct room_data {
+class room_data {
+    public:
     vector<wstring> art;
     vector<wstring> collisions;
     vector<wstring> colors;
@@ -12,7 +13,8 @@ struct room_data {
     vector<string> pickups;
 };
 
-struct floor_data {
+class floor_data {
+    public:
     vector<room_data>room;
     vector<string> layout;
-}floors[7];
+}

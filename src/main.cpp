@@ -37,20 +37,130 @@ void reset_tile(int, int);
 void event_handler(int, int);
 void move_player(int&, vector<string>&);
 int spawn_pickup(pickup, int, int, int, int);
-void lock_movement();
-void unlock_movement();
 void death_sequence();
 void win_sequence();
-void add_lighter_fuel(int);
-void set_lighter_fuel(int);
-void add_health(int);
-void set_health(int);
 void Introduction();
 int TitleScreen(int);
 int PauseMenu();
 void Settings();
 int Game ();
 int main ();
+
+class Map {
+    private:
+
+    int current_room;
+    int current_floor = 0;
+
+    int floor_layout_x;
+    int floor_layout_y;
+
+    floor_data floor;
+
+    public:
+
+    void loadFloor(Player plr, int floor_n) {
+    
+    floor.room.resize(floor_art_source[floor_n].size());
+    floor.layout = floor_layout_source[floor_n];
+
+    for(int i = 0; i < floor_art_source[floor_n].size(); i++) {
+        floor.room[i].art = floor_art_source[floor_n][i];
+        floor.room[i].collisions = floor_collisions_source[floor_n][i];
+        floor.room[i].colors = floor_colors_source[floor_n][i];
+        floor.room[i].events = floor_events_source[floor_n][i];
+        floor.room[i].lights = floor_lights_source[floor_n][i];
+        floor.room[i].entities = floor_entities_source[floor_n][i];
+        floor.room[i].pickups = floor_pickups_source[floor_n][i];
+    }
+    current_room = floor_starting_rooms[floor_n];
+    
+    coord playerPos = plr.getPos();
+    playerPos.x = floor_starting_x[floor_n];
+    playerPos.y = floor_starting_y[floor_n];
+
+    return;
+}
+
+};
+
+class Player {
+    private:
+
+    coord pos = {4, 10};
+    
+    int maxHealth = 20;
+    float maxLighterFuel = 20;    
+    bool lighterOn = true;
+    bool movement_lock = false;
+
+    public:
+
+    char icon = '@';
+
+    int health = 20;
+    float lighterFuel = 20;
+    int lighter_strength = 6;
+    float lighterFuelRegen = 0.7;
+    float lighterFuelConsumption = 0.1;
+
+    coord getPos() {
+        return pos; 
+    }
+
+    void addHealth(int val) {
+        health += val;
+        health = min(health, max_health);
+        return;
+    }
+
+    void setHealth(int val) {
+        health = val;
+        health = min(health, max_health);
+        return;
+    }
+
+    void addLighterFuel(int val) {
+        lighter_fuel += val;
+        lighter_fuel = min(lighter_fuel, max_lighter_fuel);
+        return;
+    }
+
+    void setLighterFuel(int val) {
+        lighter_fuel = val;
+        lighter_fuel = min(lighter_fuel, max_lighter_fuel);
+        return;
+    }
+
+    void lockMovement() {
+        movement_lock = true; return;
+    }
+
+    void unlockMovement() {
+        movement_lock = false; return;
+    }
+
+    void move(int& in) {
+
+    if(movement_lock) return;
+
+    int x = 0, y = 0;
+
+    if(in == keyLeft) x-=2;
+    else if(in == keyUp) y--;
+    else if(in == keyRight) x+=2;
+    else if(in == keyDown) y++;
+
+    if(in == keyToggleLighter) {
+        lighterOn = !lighterOn;
+        return;
+    }
+
+    event_handler(pos.x + x, pos.y + y);
+    return;
+}
+
+};
 
 // -------------- message logs and printing --------------
 
@@ -382,26 +492,6 @@ void event_handler(int x, int y) {
     return;
 }
 
-void move_player(int& in) {
-
-    if(movement_lock) return;
-
-    int x = 0, y = 0;
-
-    if(in == keyLeft) x-=2;
-    else if(in == keyUp) y--;
-    else if(in == keyRight) x+=2;
-    else if(in == keyDown) y++;
-
-    if(in == keyToggleLighter) {
-        lighter_on = !lighter_on;
-        return;
-    }
-
-    event_handler(player_pos.x + x, player_pos.y + y);
-    return;
-}
-
 // -------------------- game functions --------------------
 
 void death_sequence() {
@@ -410,7 +500,7 @@ void death_sequence() {
 
     wbkgd(win, COLOR_PAIR(7));
     wrefresh(win);
-    napms(1500);
+    napms(1200);
 
     wbkgd(win, COLOR_PAIR(3));
     print_centered(win, -5, 0, "You lost!");
@@ -502,32 +592,6 @@ int spawn_pickup(pickup p, int type, int x, int y, int room_n) {
 
     return 0;
 
-}
-
-void add_lighter_fuel(int val) {
-    lighter_fuel += val;
-    lighter_fuel = min(lighter_fuel, max_lighter_fuel);
-    return;
-}
-
-void add_health(int val) {
-    health += val;
-    health = min(health, max_health);
-    return;
-}
-
-void set_health(int val) {
-    health = val;
-    health = min(health, max_health);
-    return;
-}
-
-void lock_movement() {
-    movement_lock = true; return;
-}
-
-void unlock_movement() {
-    movement_lock = false; return;
 }
 
 // ---------------- title screen and game -----------------

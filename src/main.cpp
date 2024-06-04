@@ -46,43 +46,208 @@ void Settings();
 int Game ();
 int main ();
 
-class Map {
-    private:
+class messageLog {
+	private:
+	
+	
+	
+	public:
+	
+	void print_messages(WINDOW* win) {
+		wattron(win, A_BOLD);
+		for(auto it = message_log.begin(); it != message_log.end();) {
+			if((*it).second <= 0) {
+				it = message_log.erase(it);
+			}
+			else {
+				wprintw(win, "\n  %s", (*it).first.c_str());
+				(*it).second--;
+				it++;
+			}
+		}
+		wattroff(win, A_BOLD);
+	}
 
-    int current_room;
-    int current_floor = 0;
+	void send_message(const char* line, int duration) {
+		message_log.push_back({line, duration});
+	}
 
-    int floor_layout_x;
-    int floor_layout_y;
-
-    floor_data floor;
-
-    public:
-
-    void loadFloor(Player plr, int floor_n) {
-    
-    floor.room.resize(floor_art_source[floor_n].size());
-    floor.layout = floor_layout_source[floor_n];
-
-    for(int i = 0; i < floor_art_source[floor_n].size(); i++) {
-        floor.room[i].art = floor_art_source[floor_n][i];
-        floor.room[i].collisions = floor_collisions_source[floor_n][i];
-        floor.room[i].colors = floor_colors_source[floor_n][i];
-        floor.room[i].events = floor_events_source[floor_n][i];
-        floor.room[i].lights = floor_lights_source[floor_n][i];
-        floor.room[i].entities = floor_entities_source[floor_n][i];
-        floor.room[i].pickups = floor_pickups_source[floor_n][i];
-    }
-    current_room = floor_starting_rooms[floor_n];
-    
-    coord playerPos = plr.getPos();
-    playerPos.x = floor_starting_x[floor_n];
-    playerPos.y = floor_starting_y[floor_n];
-
-    return;
+	void send_message(char* line, int duration) {
+		message_log.push_back({line, duration});
+	}
+		
 }
 
-};
+class lightmap {
+
+	private:
+	
+	public:
+	
+	void clear_lightmap() {
+		for(int i = 0; i < lightmap.size(); i++) {
+			fill(lightmap[i].begin(), lightmap[i].end(), 0);
+		}
+	}
+
+	int get_light_level(int depth, int radius) {
+		if(depth < radius - 1) {
+				return 3;
+			}
+			else if(depth == radius - 1) {
+				return 2;
+			}
+			else return 1;
+	}
+
+	void _cast_light2(int x, int y, int direction, int radius, int depth, vector<vector<int>>& visited) {
+    int light_level = get_light_level(depth, radius);
+    auto& active_room = floors[current_floor].room[current_room];
+
+    if(y < 0 || y >= active_room.art.size()) return;
+    if(x < 0 || x >= active_room.art[0].size()) return;
+
+    if(visited[y][x]) {
+        return;
+    }
+    visited[y][x] = true;
+
+    if(lightmap[y][x] < light_level) {
+        lightmap[y][x] = light_level;
+    }
+
+    if(active_room.collisions[y][x] == 'X') return;
+    if(depth >= radius) return;
+
+    switch(direction) {
+        case 0:
+        _cast_light2(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
+        _cast_light2(x, y-1, 2, radius, depth+1, visited);
+        _cast_light2(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
+
+        _cast_light2(x-1, y, 4, radius, depth+!(x%2), visited);
+        _cast_light2(x+1, y, 5, radius, depth+!(x%2), visited);
+        
+        _cast_light2(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
+        _cast_light2(x, y+1, 7, radius, depth+1, visited);
+        _cast_light2(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
+        return;
+
+        case 1:
+        _cast_light2(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
+        return;
+        
+        case 2:
+        _cast_light2(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
+        _cast_light2(x, y-1, 2, radius, depth+1, visited);
+        _cast_light2(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
+        return;
+
+        case 3:
+        _cast_light2(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
+        return;
+
+        case 4:
+        _cast_light2(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
+        _cast_light2(x-1, y, 4, radius, depth+!(x%2), visited);
+        _cast_light2(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
+        return;
+
+        case 5:
+        _cast_light2(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
+        _cast_light2(x+1, y, 5, radius, depth+!(x%2), visited);
+        _cast_light2(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
+        return;
+
+        case 6:
+        _cast_light2(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
+        return;
+
+        case 7:
+        _cast_light2(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
+        _cast_light2(x, y+1, 7, radius, depth+1, visited);
+        _cast_light2(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
+        return;
+
+        case 8:
+        _cast_light2(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
+        return;
+
+    }
+}
+
+	void _cast_light(int x, int y, int radius, int depth, vector<vector<int>>& visited) {
+
+		auto& active_room = floors[current_floor].room[current_room];
+
+		typedef struct node {
+			int x, y, depth;
+		}node;
+		queue<node> q;
+
+		q.push({x, y, depth});
+		visited[y][x] = true;
+
+		int light_level;
+
+		while(!q.empty()) {
+
+			node curr = q.front();
+
+			light_level = get_light_level(curr.depth, radius);
+			
+			if(lightmap[curr.y][curr.x] < light_level) {
+				lightmap[curr.y][curr.x] = light_level;
+			}
+
+			if(active_room.collisions[curr.y][curr.x] == 'X') {
+				q.pop();
+				continue;
+			}
+			
+			if(curr.depth >= radius) {
+				q.pop();
+				continue;
+			}
+
+			if(curr.y != 0 && !visited[curr.y-1][curr.x]) {
+				q.push({curr.x, curr.y-1, curr.depth + 1});
+				visited[curr.y-1][curr.x] = true;
+			}
+			if(curr.y != lightmap.size() - 1 && !visited[curr.y+1][curr.x]) {
+				q.push({curr.x, curr.y+1, curr.depth + 1});
+				visited[curr.y+1][curr.x] = true;
+			}
+			if(curr.x != 0 && !visited[curr.y][curr.x-1]) {
+				if(curr.x % 2) {
+					q.push({curr.x-1, curr.y, curr.depth});
+				}
+				else {
+					q.push({curr.x-1, curr.y, curr.depth + 1});
+				}
+				visited[curr.y][curr.x-1] = true;
+			}
+			if(curr.x != lightmap[0].size() - 1 && !visited[curr.y][curr.x+1]) {
+				if(curr.x % 2) {
+					q.push({curr.x+1, curr.y, curr.depth});
+				}
+				else {
+					q.push({curr.x+1, curr.y, curr.depth + 1});
+				}
+				visited[curr.y][curr.x+1] = true;
+			}
+			q.pop();
+		}
+	}
+
+	void cast_light(int x, int y, int radius) {
+		auto& active_room = floors[current_floor].room[current_room];
+		vector<vector<int>> visited(active_room.art.size(), vector<int>(active_room.art[0].size(), 0));
+		_cast_light2(x, y, 0, radius, 0, visited);
+	}
+
+}
+
 
 class Player {
     private:
@@ -162,6 +327,46 @@ class Player {
 
 };
 
+class Map {
+    private:
+
+	Player plr;
+	messageLog msgLog;
+    int current_room;
+    int current_floor = 0;
+
+    int floor_layout_x;
+    int floor_layout_y;
+
+    floor_data floor;
+
+    public:
+
+    void loadFloor(Player plr, int floor_n) {
+    
+    floor.room.resize(floor_art_source[floor_n].size());
+    floor.layout = floor_layout_source[floor_n];
+
+    for(int i = 0; i < floor_art_source[floor_n].size(); i++) {
+        floor.room[i].art = floor_art_source[floor_n][i];
+        floor.room[i].collisions = floor_collisions_source[floor_n][i];
+        floor.room[i].colors = floor_colors_source[floor_n][i];
+        floor.room[i].events = floor_events_source[floor_n][i];
+        floor.room[i].lights = floor_lights_source[floor_n][i];
+        floor.room[i].entities = floor_entities_source[floor_n][i];
+        floor.room[i].pickups = floor_pickups_source[floor_n][i];
+    }
+    current_room = floor_starting_rooms[floor_n];
+    
+    coord playerPos = plr.getPos();
+    playerPos.x = floor_starting_x[floor_n];
+    playerPos.y = floor_starting_y[floor_n];
+
+    return;
+}
+
+};
+
 // -------------- message logs and printing --------------
 
 void print_centered(WINDOW* win, int line_offset, int col_offset, string str) {
@@ -169,197 +374,15 @@ void print_centered(WINDOW* win, int line_offset, int col_offset, string str) {
     return;
 }
 
-void print_messages(WINDOW* win) {
-    wattron(win, A_BOLD);
-    for(auto it = message_log.begin(); it != message_log.end();) {
-        if((*it).second <= 0) {
-            it = message_log.erase(it);
-        }
-        else {
-            wprintw(win, "\n  %s", (*it).first.c_str());
-            (*it).second--;
-            it++;
-        }
-    }
-    wattroff(win, A_BOLD);
-}
-
-void send_message(const char* line, int duration) {
-    message_log.push_back({line, duration});
-}
-
-void send_message(char* line, int duration) {
-    message_log.push_back({line, duration});
-}
-
-
 // ---------------------- lightmap ----------------------
 
-void clear_lightmap() {
-    for(int i = 0; i < lightmap.size(); i++) {
-        fill(lightmap[i].begin(), lightmap[i].end(), 0);
-    }
-}
 
-int get_light_level(int depth, int radius) {
-    if(depth < radius - 1) {
-            return 3;
-        }
-        else if(depth == radius - 1) {
-            return 2;
-        }
-        else return 1;
-}
 
 // Directions:
 // 1 2 3
 // 4 0 5
 // 6 7 8
-void _cast_light2(int x, int y, int direction, int radius, int depth, vector<vector<int>>& visited) {
-    int light_level = get_light_level(depth, radius);
-    auto& active_room = floors[current_floor].room[current_room];
 
-    if(y < 0 || y >= active_room.art.size()) return;
-    if(x < 0 || x >= active_room.art[0].size()) return;
-
-    if(visited[y][x]) {
-        return;
-    }
-    visited[y][x] = true;
-
-    if(lightmap[y][x] < light_level) {
-        lightmap[y][x] = light_level;
-    }
-
-    if(active_room.collisions[y][x] == 'X') return;
-    if(depth >= radius) return;
-
-    switch(direction) {
-        case 0:
-        _cast_light2(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
-        _cast_light2(x, y-1, 2, radius, depth+1, visited);
-        _cast_light2(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
-
-        _cast_light2(x-1, y, 4, radius, depth+!(x%2), visited);
-        _cast_light2(x+1, y, 5, radius, depth+!(x%2), visited);
-        
-        _cast_light2(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
-        _cast_light2(x, y+1, 7, radius, depth+1, visited);
-        _cast_light2(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
-        return;
-
-        case 1:
-        _cast_light2(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
-        return;
-        
-        case 2:
-        _cast_light2(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
-        _cast_light2(x, y-1, 2, radius, depth+1, visited);
-        _cast_light2(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
-        return;
-
-        case 3:
-        _cast_light2(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
-        return;
-
-        case 4:
-        _cast_light2(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
-        _cast_light2(x-1, y, 4, radius, depth+!(x%2), visited);
-        _cast_light2(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
-        return;
-
-        case 5:
-        _cast_light2(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
-        _cast_light2(x+1, y, 5, radius, depth+!(x%2), visited);
-        _cast_light2(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
-        return;
-
-        case 6:
-        _cast_light2(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
-        return;
-
-        case 7:
-        _cast_light2(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
-        _cast_light2(x, y+1, 7, radius, depth+1, visited);
-        _cast_light2(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
-        return;
-
-        case 8:
-        _cast_light2(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
-        return;
-
-    }
-}
-
-void _cast_light(int x, int y, int radius, int depth, vector<vector<int>>& visited) {
-
-    auto& active_room = floors[current_floor].room[current_room];
-
-    typedef struct node {
-        int x, y, depth;
-    }node;
-    queue<node> q;
-
-    q.push({x, y, depth});
-    visited[y][x] = true;
-
-    int light_level;
-
-    while(!q.empty()) {
-
-        node curr = q.front();
-
-        light_level = get_light_level(curr.depth, radius);
-        
-        if(lightmap[curr.y][curr.x] < light_level) {
-            lightmap[curr.y][curr.x] = light_level;
-        }
-
-        if(active_room.collisions[curr.y][curr.x] == 'X') {
-            q.pop();
-            continue;
-        }
-        
-        if(curr.depth >= radius) {
-            q.pop();
-            continue;
-        }
-
-        if(curr.y != 0 && !visited[curr.y-1][curr.x]) {
-            q.push({curr.x, curr.y-1, curr.depth + 1});
-            visited[curr.y-1][curr.x] = true;
-        }
-        if(curr.y != lightmap.size() - 1 && !visited[curr.y+1][curr.x]) {
-            q.push({curr.x, curr.y+1, curr.depth + 1});
-            visited[curr.y+1][curr.x] = true;
-        }
-        if(curr.x != 0 && !visited[curr.y][curr.x-1]) {
-            if(curr.x % 2) {
-                q.push({curr.x-1, curr.y, curr.depth});
-            }
-            else {
-                q.push({curr.x-1, curr.y, curr.depth + 1});
-            }
-            visited[curr.y][curr.x-1] = true;
-        }
-        if(curr.x != lightmap[0].size() - 1 && !visited[curr.y][curr.x+1]) {
-            if(curr.x % 2) {
-                q.push({curr.x+1, curr.y, curr.depth});
-            }
-            else {
-                q.push({curr.x+1, curr.y, curr.depth + 1});
-            }
-            visited[curr.y][curr.x+1] = true;
-        }
-        q.pop();
-    }
-}
-
-void cast_light(int x, int y, int radius) {
-    auto& active_room = floors[current_floor].room[current_room];
-    vector<vector<int>> visited(active_room.art.size(), vector<int>(active_room.art[0].size(), 0));
-    _cast_light2(x, y, 0, radius, 0, visited);
-}
 
 // ----------- zone changes and event handler ------------
 

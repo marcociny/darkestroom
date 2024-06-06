@@ -16,44 +16,37 @@ using namespace std;
 
 #define DEBUG_MODE 4 // 0 - 4
 
-// global structures
-
-vector<vector<short>>lightmap;
-
-list<pair<string,int>>message_log;
-
 // function prototypes
 
-void print_centered(WINDOW*, int, int, string);
-void print_messages(WINDOW*);
-void send_message(char*, int);
-void clear_lightmap();
-int get_light_level(int, int);
-void _cast_light(int, int, int, int, vector<vector<int>>&);
-void cast_light(int, int, int);
-void change_floor (int, string);
-void change_room(int, int, int);
-void reset_tile(int, int);
-void event_handler(int, int);
-void move_player(int&, vector<string>&);
-int spawn_pickup(pickup, int, int, int, int);
-void death_sequence();
-void win_sequence();
-void Introduction();
-int TitleScreen(int);
-int PauseMenu();
-void Settings();
-int Game ();
-int main ();
+class MessageLog;
+class Lightmap;
+class Player;
+class Map;
+class GUI;
+class Game;
 
-class messageLog {
+
+
+void print_centered(WINDOW* win, int line_offset, int col_offset, string str) {
+    mvwprintw(win, win->_maxy / 2 + line_offset, win->_maxx / 2 - str.length() / 2 + col_offset, "%s\n", str.c_str());
+    return;
+}
+
+class MessageLog {
 	private:
-	
+
+	list<pair<string,int>>messageLog;
 	
 	
 	public:
-	
-	void print_messages(WINDOW* win) {
+
+    /*----------------------------------------------*/
+    void printMessages(WINDOW* win);
+	void sendMessage(const char* line, int duration);
+	void sendMessage(char* line, int duration);
+	/*----------------------------------------------*/
+
+	void printMessages(WINDOW* win) {
 		wattron(win, A_BOLD);
 		for(auto it = message_log.begin(); it != message_log.end();) {
 			if((*it).second <= 0) {
@@ -68,39 +61,21 @@ class messageLog {
 		wattroff(win, A_BOLD);
 	}
 
-	void send_message(const char* line, int duration) {
+	void sendMessage(const char* line, int duration) {
 		message_log.push_back({line, duration});
 	}
 
-	void send_message(char* line, int duration) {
+	void sendMessage(char* line, int duration) {
 		message_log.push_back({line, duration});
 	}
 		
-}
+};
 
-class lightmap {
+class Lightmap {
 
 	private:
-	
-	public:
-	
-	void clear_lightmap() {
-		for(int i = 0; i < lightmap.size(); i++) {
-			fill(lightmap[i].begin(), lightmap[i].end(), 0);
-		}
-	}
-
-	int get_light_level(int depth, int radius) {
-		if(depth < radius - 1) {
-				return 3;
-			}
-			else if(depth == radius - 1) {
-				return 2;
-			}
-			else return 1;
-	}
-
-	void _cast_light2(int x, int y, int direction, int radius, int depth, vector<vector<int>>& visited) {
+    vector<vector<short>>lightmap;
+    void _castLight(int x, int y, int direction, int radius, int depth, vector<vector<int>>& visited) {
     int light_level = get_light_level(depth, radius);
     auto& active_room = floors[current_floor].room[current_room];
 
@@ -121,133 +96,93 @@ class lightmap {
 
     switch(direction) {
         case 0:
-        _cast_light2(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
-        _cast_light2(x, y-1, 2, radius, depth+1, visited);
-        _cast_light2(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
+        _castLight(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
+        _castLight(x, y-1, 2, radius, depth+1, visited);
+        _castLight(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
 
-        _cast_light2(x-1, y, 4, radius, depth+!(x%2), visited);
-        _cast_light2(x+1, y, 5, radius, depth+!(x%2), visited);
+        _castLight(x-1, y, 4, radius, depth+!(x%2), visited);
+        _castLight(x+1, y, 5, radius, depth+!(x%2), visited);
         
-        _cast_light2(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
-        _cast_light2(x, y+1, 7, radius, depth+1, visited);
-        _cast_light2(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
+        _castLight(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
+        _castLight(x, y+1, 7, radius, depth+1, visited);
+        _castLight(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
         return;
 
         case 1:
-        _cast_light2(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
+        _castLight(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
         return;
         
         case 2:
-        _cast_light2(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
-        _cast_light2(x, y-1, 2, radius, depth+1, visited);
-        _cast_light2(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
+        _castLight(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
+        _castLight(x, y-1, 2, radius, depth+1, visited);
+        _castLight(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
         return;
 
         case 3:
-        _cast_light2(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
+        _castLight(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
         return;
 
         case 4:
-        _cast_light2(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
-        _cast_light2(x-1, y, 4, radius, depth+!(x%2), visited);
-        _cast_light2(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
+        _castLight(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
+        _castLight(x-1, y, 4, radius, depth+!(x%2), visited);
+        _castLight(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
         return;
 
         case 5:
-        _cast_light2(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
-        _cast_light2(x+1, y, 5, radius, depth+!(x%2), visited);
-        _cast_light2(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
+        _castLight(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
+        _castLight(x+1, y, 5, radius, depth+!(x%2), visited);
+        _castLight(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
         return;
 
         case 6:
-        _cast_light2(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
+        _castLight(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
         return;
 
         case 7:
-        _cast_light2(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
-        _cast_light2(x, y+1, 7, radius, depth+1, visited);
-        _cast_light2(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
+        _castLight(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
+        _castLight(x, y+1, 7, radius, depth+1, visited);
+        _castLight(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
         return;
 
         case 8:
-        _cast_light2(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
+        _castLight(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
         return;
 
     }
-}
+};
 
-	void _cast_light(int x, int y, int radius, int depth, vector<vector<int>>& visited) {
+	
+	public:
+	
+    /*----------------------------------------------*/
+    void clear();
+    int getLightLevel(int depth, int radius);
+    void castLight(int x, int y, int radius);
+    /*----------------------------------------------*/
 
-		auto& active_room = floors[current_floor].room[current_room];
-
-		typedef struct node {
-			int x, y, depth;
-		}node;
-		queue<node> q;
-
-		q.push({x, y, depth});
-		visited[y][x] = true;
-
-		int light_level;
-
-		while(!q.empty()) {
-
-			node curr = q.front();
-
-			light_level = get_light_level(curr.depth, radius);
-			
-			if(lightmap[curr.y][curr.x] < light_level) {
-				lightmap[curr.y][curr.x] = light_level;
-			}
-
-			if(active_room.collisions[curr.y][curr.x] == 'X') {
-				q.pop();
-				continue;
-			}
-			
-			if(curr.depth >= radius) {
-				q.pop();
-				continue;
-			}
-
-			if(curr.y != 0 && !visited[curr.y-1][curr.x]) {
-				q.push({curr.x, curr.y-1, curr.depth + 1});
-				visited[curr.y-1][curr.x] = true;
-			}
-			if(curr.y != lightmap.size() - 1 && !visited[curr.y+1][curr.x]) {
-				q.push({curr.x, curr.y+1, curr.depth + 1});
-				visited[curr.y+1][curr.x] = true;
-			}
-			if(curr.x != 0 && !visited[curr.y][curr.x-1]) {
-				if(curr.x % 2) {
-					q.push({curr.x-1, curr.y, curr.depth});
-				}
-				else {
-					q.push({curr.x-1, curr.y, curr.depth + 1});
-				}
-				visited[curr.y][curr.x-1] = true;
-			}
-			if(curr.x != lightmap[0].size() - 1 && !visited[curr.y][curr.x+1]) {
-				if(curr.x % 2) {
-					q.push({curr.x+1, curr.y, curr.depth});
-				}
-				else {
-					q.push({curr.x+1, curr.y, curr.depth + 1});
-				}
-				visited[curr.y][curr.x+1] = true;
-			}
-			q.pop();
+	void clear() {
+		for(int i = 0; i < lightmap.size(); i++) {
+			fill(lightmap[i].begin(), lightmap[i].end(), 0);
 		}
 	}
 
-	void cast_light(int x, int y, int radius) {
-		auto& active_room = floors[current_floor].room[current_room];
-		vector<vector<int>> visited(active_room.art.size(), vector<int>(active_room.art[0].size(), 0));
-		_cast_light2(x, y, 0, radius, 0, visited);
+	int getLightLevel(int depth, int radius) {
+		if(depth < radius - 1) {
+				return 3;
+			}
+			else if(depth == radius - 1) {
+				return 2;
+			}
+			else return 1;
 	}
 
-}
+	void castLight(int x, int y, int radius) {
+		auto& active_room = floors[current_floor].room[current_room];
+		vector<vector<int>> visited(active_room.art.size(), vector<int>(active_room.art[0].size(), 0));
+		_castLight(x, y, 0, radius, 0, visited);
+	}
 
+};
 
 class Player {
     private:
@@ -268,6 +203,17 @@ class Player {
     int lighter_strength = 6;
     float lighterFuelRegen = 0.7;
     float lighterFuelConsumption = 0.1;
+
+    /*----------------------------------------------*/
+    coord getPos();
+    void addHealth(int val);
+    void setHealth(int val);
+    void addLighterFuel(int val);
+    void setLighterFuel(int val);
+    void lockMovement();
+    void unlockMovement();
+    void move(int& in);
+    /*----------------------------------------------*/
 
     coord getPos() {
         return pos; 
@@ -327,589 +273,22 @@ class Player {
 
 };
 
-class Map {
+class GUI {
     private:
 
-	Player plr;
-	messageLog msgLog;
-    int current_room;
-    int current_floor = 0;
-
-    int floor_layout_x;
-    int floor_layout_y;
-
-    floor_data floor;
+    MessageLog messageLog;
 
     public:
 
-    void loadFloor(Player plr, int floor_n) {
-    
-    floor.room.resize(floor_art_source[floor_n].size());
-    floor.layout = floor_layout_source[floor_n];
-
-    for(int i = 0; i < floor_art_source[floor_n].size(); i++) {
-        floor.room[i].art = floor_art_source[floor_n][i];
-        floor.room[i].collisions = floor_collisions_source[floor_n][i];
-        floor.room[i].colors = floor_colors_source[floor_n][i];
-        floor.room[i].events = floor_events_source[floor_n][i];
-        floor.room[i].lights = floor_lights_source[floor_n][i];
-        floor.room[i].entities = floor_entities_source[floor_n][i];
-        floor.room[i].pickups = floor_pickups_source[floor_n][i];
-    }
-    current_room = floor_starting_rooms[floor_n];
-    
-    coord playerPos = plr.getPos();
-    playerPos.x = floor_starting_x[floor_n];
-    playerPos.y = floor_starting_y[floor_n];
-
-    return;
-}
-
-};
-
-// -------------- message logs and printing --------------
-
-void print_centered(WINDOW* win, int line_offset, int col_offset, string str) {
-    mvwprintw(win, win->_maxy / 2 + line_offset, win->_maxx / 2 - str.length() / 2 + col_offset, "%s\n", str.c_str());
-    return;
-}
-
-// ---------------------- lightmap ----------------------
-
-
-
-// Directions:
-// 1 2 3
-// 4 0 5
-// 6 7 8
-
-
-// ----------- zone changes and event handler ------------
-
-void change_floor (int floor_number, string change_text) {
-
-    string floor_text = msgs[LANG_OPTION]["Floor"] + to_string(floor_number);
-    current_floor = floor_number;
-    WINDOW* txtbox = newwin(LINES,COLS,0,0);
-    print_centered(txtbox, -2, 0, floor_text.c_str());
-    print_centered(txtbox, 0, 0, change_text.c_str());
-    wborder(txtbox, '|', '|', '-', '-', '+', '+', '+', '+');
-    wrefresh(txtbox);
-    napms(2300);
-    
-    delwin(txtbox);
-    
-    return;
-}
-
-void change_room(int room_number, int x, int y) {
-    current_room = room_number;
-    auto& active_room = floors[current_floor].room[current_room];
-
-    lightmap.resize(active_room.art.size(), vector<short>(active_room.art[0].size()));
-    player_pos = {x,y};
-
-    return;
-}
-
-void reset_tile(int x, int y) {
-    auto& r = floors[current_floor].room[current_room];
-
-    r.art[y][x] = floor_art_source[current_floor][current_room][y][x];
-    r.colors[y][x] = floor_colors_source[current_floor][current_room][y][x];
-    r.events[y][x] = floor_events_source[current_floor][current_room][y][x];
-    r.pickups[y][x] = floor_pickups_source[current_floor][current_room][y][x];
-}
-
-void event_handler(int x, int y) {
-
-    auto& active_room = floors[current_floor].room[current_room];
-    int active_room_lines = active_room.art.size();
-    int active_room_cols = active_room.art[0].size();
-
-    if(x<0 || x > active_room.art[0].size()-1) return;
-    if(y<0 || y > active_room.art.size()-1) return;
-
-    bool canMove = true;
-
-    int new_room;
-    char* s = (char*)malloc(128 * sizeof(char));
-    int item_type = active_room.pickups[y][x];
-    switch(active_room.events[y][x]) {
-        case '.': break;
-
-        case 'a': // move a room left
-            new_room = (int)floors[current_floor].layout[floor_layout_y][--floor_layout_x]-48;
-            change_room(new_room, active_room_cols-3, player_pos.y);
-
-        break;
-
-        case 'b': // move a room up
-            new_room = (int)floors[current_floor].layout[--floor_layout_y][floor_layout_x]-48;
-            change_room(new_room, player_pos.x, active_room_lines-2);
-
-        break;
-
-        case 'c': // move a room right
-            new_room = (int)floors[current_floor].layout[floor_layout_y][++floor_layout_x]-48;
-            change_room(new_room, 2, player_pos.y);
-
-        break;
-
-        case 'd': // move a room down
-            new_room = (int)floors[current_floor].layout[++floor_layout_y][floor_layout_x]-48;
-            change_room(new_room, player_pos.x, 2);
-            
-        break;
-        
-
-        case '1':
-
-            add_lighter_fuel( item_type );
-            snprintf(s, 128, "Picked up some lighter fuel (%d).", item_type);
-            send_message(s, 4*FRAMES_PER_SECOND);
-            reset_tile(x, y);
-
-        break;
-
-        case '2':
-
-            snprintf(s, 128, "Picked up note number %d.", item_type);
-            send_message(s, 4*FRAMES_PER_SECOND);
-            reset_tile(x, y);
-
-        break;
-
-        case '3':
-
-            snprintf(s, 128, "Used a band-aid (+%d health)", item_type);
-            add_health(item_type);
-            send_message(s, 4*FRAMES_PER_SECOND);
-            reset_tile(x, y);
-
-        break;
-
-        case '4':
-
-            snprintf(s, 128, "Used a medkit. (+%d health)", item_type);
-            add_health(item_type);
-            send_message(s, 4*FRAMES_PER_SECOND);
-            reset_tile(x, y);
-
-        break;
-
-        case '5':
-
-            health -= item_type;
-            snprintf(s, 128, "Ow! Stepped on a spike (-%d)", item_type);
-            send_message(s, 4*FRAMES_PER_SECOND);
-
-        break;
-    }
-
-    if(active_room.collisions[y][x] != 'X' && active_room.collisions[y][x] != 'O' && canMove) {
-        player_pos.x += (x - player_pos.x);
-        player_pos.y += (y - player_pos.y);
-    }
-
-    return;
-}
-
-// -------------------- game functions --------------------
-
-void death_sequence() {
-    WINDOW* win = newwin(LINES, COLS, 0, 0);
-    keypad(win, true);
-
-    wbkgd(win, COLOR_PAIR(7));
-    wrefresh(win);
-    napms(1200);
-
-    wbkgd(win, COLOR_PAIR(3));
-    print_centered(win, -5, 0, "You lost!");
-    wrefresh(win);
-    napms(1000);
-    print_centered(win, -3, 0, "Died from: ?");
-    wrefresh(win);
-    napms(1000);
-    print_centered(win, -1, 0, "Score: ?");
-    wrefresh(win);
-    napms(1000);
-    print_centered(win, 1, 0, "Press any key to continue");
-    flushinp();
-    wgetch(win);
-
-
-    delwin(win);
-
-    return;
-}
-
-// TBD
-void win_sequence() {
-    return;
-}
-
-void init_floor_pickups(int floor_n) {
-
-    auto active_floor = floors[current_floor];
-    
-
-    switch(floor_n) {
-
-        case 0:
-
-            // spawn:
-            // 10 notes
-            // 12 lighter fuel
-            // 60-120 spikes
-
-            int rand_room, rand_line, rand_col;
-            for(int i = 0; i < 120; i++) {
-                rand_room = rand()%active_floor.room.size();
-                rand_line = 1 + (rand() % (active_floor.room[rand_room].art.size()-1 ) );
-                rand_col = 2 + 2 * (rand() % (active_floor.room[rand_room].art[0].size()/2 - 1 ) );
-                if(spawn_pickup(spike_object, i, rand_col, rand_line, rand_room) != 0) {
-                    i--;
-                }
-            }
-            for(int i = 0; i < 10; i++) {
-                rand_room = rand()%active_floor.room.size();
-                rand_line = 1 + (rand() % (active_floor.room[rand_room].art.size()-1 ) );
-                rand_col = 2 + 2 * (rand() % (active_floor.room[rand_room].art[0].size()/2 - 1 ) );
-                if(spawn_pickup(note_pickup, i, rand_col, rand_line, rand_room) != 0) {
-                    i--;
-                }
-            }
-
-            for(int i = 0; i < 12; i++) {
-                rand_room = rand()%active_floor.room.size();
-                rand_line = 1 + (rand() % (active_floor.room[rand_room].art.size()-1 ) );
-                rand_col = 2 + 2 * (rand() % (active_floor.room[rand_room].art[0].size()/2 - 1 ) );
-                if(spawn_pickup(lighter_fuel_pickup, 3, rand_col, rand_line, rand_room) != 0) {
-                    i--;
-                }
-            }
-
-        break;
-
-        case 2:
-            return;
-        break;
-
-    }
-
-}
-
-int spawn_pickup(pickup p, int type, int x, int y, int room_n) {
-    auto& r = floors[current_floor].room[room_n];
-
-    if(r.pickups[y][x] != ' ' && r.pickups[y][x] != '.') {
-        return -1;
-    }
-
-    r.art[y][x] = p.icon;
-    r.colors[y][x] = p.color;
-    r.events[y][x] = p.ID;
-    r.pickups[y][x] = type;
-
-    return 0;
-
-}
-
-// ---------------- title screen and game -----------------
-
-void Introduction () {
-    
-    //wip
-    //WINDOW* txtbox = newwin(LINES,COLS,0,0);
-    //wattron(txtbox, COLOR_PAIR(2));
-    //print_centered(txtbox, -2, 0, msgs[LANG_OPTION]["IntroductoryText1"]);
-    //print_centered(txtbox, 0, 0, msgs[LANG_OPTION]["IntroductoryText2"]);
-    //print_centered(txtbox, 2, 0, msgs[LANG_OPTION]["IntroductoryText3"]);
-    //print_centered(txtbox, 4, 0, msgs[LANG_OPTION]["IntroductoryText4"]);
-    //wattroff(txtbox, COLOR_PAIR(2));
-
-    //wborder(txtbox, '|', '|', '-', '-', '+', '+', '+', '+');
-    //wrefresh(txtbox);
-    //wgetch(txtbox);
-
-    
-
-    //wclear(txtbox);
-    //print_centered(txtbox, 0, 0, msgs[LANG_OPTION]["IntroductoryText5"]);
-    //wborder(txtbox, '|', '|', '-', '-', '+', '+', '+', '+');
-    //wgetch(txtbox);
-
-    //delwin(txtbox);
-    
-    return;
-}
-
-int Game () {
-
-    if(!load_save_file()) {
-        Introduction();
-    }
-
-    WINDOW* win = newwin((int)LINES * 0.75, COLS,0,0); // screen
-    nodelay(stdscr, TRUE);
-    keypad(win, TRUE);
-    WINDOW* message_log = newwin((int)LINES * 0.25, (int)COLS,LINES * 0.75, 0);
-    wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
-    wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
-    wrefresh(win);
-    wrefresh(message_log);
-    
-    string floor_splash = "Floor"; floor_splash += (char)current_floor+48; floor_splash += "Splash";
-
-    change_floor(current_floor, msgs[LANG_OPTION][floor_splash]);
-    change_room(current_room, player_pos.x, player_pos.y);
-
-    init_floor_pickups(current_floor);
-    
-    unsigned int frame = 0;
-
-    int in;
-    int last_tick_lines = LINES, last_tick_cols = COLS;
-    wchar_t spinning_wheel = '/';
-
-    flushinp();
-
-    while(1) {
-
-        if(health <= 0) {
-            return 1;
-        }
-
-        // handle screen resizing
-        if(last_tick_cols != COLS || last_tick_lines != LINES) {
-            delwin(win);
-            delwin(message_log);
-
-            win = newwin((int)LINES * 0.75, COLS,0,0); // screen
-            nodelay(stdscr, TRUE);
-            keypad(win, TRUE);
-
-            message_log = newwin((int)LINES * 0.25, (int)COLS,LINES * 0.75, 0);
-
-            wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
-        }
-        if(frame%20 == 0) {
-            last_tick_lines = LINES;
-            last_tick_cols = COLS;
-        }
-
-        napms(REFRESH_RATE);
-        frame++;
-        wclear(win);
-        
-        // lighting and lighter fuel
-        {
-
-        auto& active_room = floors[current_floor].room[current_room];
-        int active_room_lines = active_room.art.size();
-        int active_room_cols = active_room.art[0].size();
-
-        clear_lightmap();
-
-        if(lighter_on) {
-            cast_light(player_pos.x, player_pos.y, lighter_strength);
-            lighter_fuel -= lighter_fuel_consumption/FRAMES_PER_SECOND;
-            if(lighter_fuel <= 0) {
-                lighter_on = false;
-            }
-        }
-        else {
-            lighter_fuel += lighter_fuel_regen/FRAMES_PER_SECOND;
-            lighter_fuel = min(lighter_fuel, max_lighter_fuel);
-        }
-
-        for(int i = 0; i < active_room_lines; i++) {
-            for(int j = 0; j < active_room_cols; j++) {
-
-                if(active_room.lights[i][j] == 46) {
-                    continue;
-                }
-
-                if(active_room.lights[i][j]-48 > 0) {
-                    cast_light(j, i, active_room.lights[i][j]-48);
-                }
-
-            }
-        }
-        
-        for(int i = 0; i < active_room_lines; i++) {
-            
-            wmove(win, (LINES-active_room_lines-((int)LINES*0.25))/2+i, (COLS-active_room_cols)/2);
-
-            for(int j = 0; j < active_room_cols; j++) {
-                
-                if(lightmap[i][j] == 0 || lightmap[i][j] == 1) {
-                    wattron(win, COLOR_PAIR(1));
-                    wprintw(win, " ");
-                    wattroff(win, COLOR_PAIR(1));
-                    continue;
-                }
-
-                if(i == player_pos.y && j == player_pos.x) {
-                    wattron(win, COLOR_PAIR(lightmap[i][j]));
-                    wprintw(win, "%c", player_icon);
-                    wattroff(win, COLOR_PAIR(lightmap[i][j]));
-                    continue;
-                }
-
-                int attr_number;
-                switch(active_room.colors[i][j]) {
-                        case 'R':
-                        wattron(win, COLOR_PAIR(10+(lightmap[i][j]==3)*10));
-                        attr_number = 10+(lightmap[i][j]==3)*10;
-                        break;
-                        case 'G':
-                        wattron(win, COLOR_PAIR(11+(lightmap[i][j]==3)*10));
-                        attr_number = 11+(lightmap[i][j]==3)*10;
-                        break;
-                        case 'B':
-                        wattron(win, COLOR_PAIR(12+(lightmap[i][j]==3)*10));
-                        attr_number = 12+(lightmap[i][j]==3)*10;
-                        break;
-                        case 'Y':
-                        wattron(win, COLOR_PAIR(13)+(lightmap[i][j]==3)*10);
-                        attr_number = 13+(lightmap[i][j]==3)*10;
-                        break;
-                        case 'M':
-                        wattron(win, COLOR_PAIR(14)+(lightmap[i][j]==3)*10);
-                        attr_number = 14+(lightmap[i][j]==3)*10;
-                        break;
-                        case 'C':
-                        wattron(win, COLOR_PAIR(15+(lightmap[i][j]==3)*10));
-                        attr_number = 15+(lightmap[i][j]==3)*10;
-                        break;
-                        case 'g':
-                        wattron(win, COLOR_PAIR(2));
-                        attr_number = 2;
-                        break;
-                        default:
-                        wattron(win, COLOR_PAIR(lightmap[i][j]));
-                        attr_number = lightmap[i][j];
-                        break;
-                }
-
-                wprintw(win, "%lc", active_room.art[i][j]);
-                wattroff(win, attr_number);
-                
-            }
-            wprintw(win, "\n");
-        }
-        
-
-        }
-
-        if(DEBUG_MODE == 1) {
-            wprintw(win, "\n\n");
-            wattron(win, COLOR_PAIR(3));
-            for(int i = 0; i < lightmap.size(); i++) {
-                for(int j = 0; j < lightmap[0].size(); j++) {
-                    wprintw(win, "%d", lightmap[i][j]);
-                }
-                wprintw(win, "\n");
-            }
-            wattroff(win, COLOR_PAIR(3));
-            wprintw(win, "%d %d", lightmap.size(), lightmap[0].size());
-        }
-        if(DEBUG_MODE == 2) {
-            wattron(win, COLOR_PAIR(3));
-            wprintw(win, "\n\nx: %d y: %d, frame %u, FPS = %d\n", player_pos.x, player_pos.y, frame, FRAMES_PER_SECOND);
-            wattroff(win, COLOR_PAIR(3));
-        }
-        if(DEBUG_MODE == 3) {
-            wattron(win, COLOR_PAIR(3));
-            wprintw(win, "\n\n%s\n", floors[current_floor].room[current_room].art[0].c_str());
-            wattroff(win, COLOR_PAIR(3));
-        }
-        if(DEBUG_MODE == 4) {
-            mvwprintw(message_log, 2, COLS * 0.91, "%f", lighter_fuel);
-            mvwprintw(message_log, 2, COLS * 0.20, "%d", in);
-            mvwprintw(message_log, 2, COLS * 0.25, "%d", current_room);
-        }
-
-        wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
-        wrefresh(win);
-        wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
-        wrefresh(message_log);
-        wclear(message_log);
-        print_messages(message_log);
-
-        // lighter fuel and health GUI
-        {
-            mvwprintw(message_log, 2, COLS * 0.88, msgs[LANG_OPTION]["Fuel"].c_str());
-            int consumption_speed = FRAMES_PER_SECOND/(lighter_fuel_consumption*4);
-            int regen_speed = (FRAMES_PER_SECOND/(lighter_fuel_regen*4));
-
-            if(frame % (consumption_speed == 0 ? 1 : consumption_speed) == 0) {
-                if(lighter_on) {
-                    spinning_wheel = spin_counterclockwise(spinning_wheel);
-                }
-
-            }
-
-            if(frame % (regen_speed == 0 ? 1 : consumption_speed) == 0) {
-                if(!lighter_on && lighter_fuel < max_lighter_fuel){
-                    spinning_wheel = spin_clockwise(spinning_wheel);
-                } 
-            }
-
-            mvwprintw(message_log, 2, COLS * 0.88 - 2, "%lc", spinning_wheel);
-
-            for(int i = 0; i < max_lighter_fuel; i+=5) {
-                // █ ▓ ░ ▮▯
-                if(lighter_fuel - i <= 0) {
-                    mvwprintw(message_log, 3, COLS * 0.88 + i/5, "░");
-                }
-                else if(lighter_fuel - i < 5) {
-                    mvwprintw(message_log, 3, COLS * 0.88 + i/5, "█");
-                }
-                else if(lighter_fuel - i >= 5) {
-                    mvwprintw(message_log, 3, COLS * 0.88 + i/5, "█");
-                }
-            }
-
-            mvwprintw(message_log, 6, COLS * 0.88, msgs[LANG_OPTION]["Health"].c_str());
-            for(int i = 0; i < max_health; i+=5) {
-                if(health - i <= 0) {
-                    mvwprintw(message_log, 7, COLS * 0.88 + i/5, "░");
-                }
-                else if(health - i < 5) {
-                    mvwprintw(message_log, 7, COLS * 0.88 + i/5, "█");
-                }
-                else if(health - i >= 5) {
-                    mvwprintw(message_log, 7, COLS * 0.88 + i/5, "█");
-                }
-            }
-
-        }
-
-        in = getch();
-        if(in != -1) {
-            move_player(in);
-        }
-
-        if(in == 'p' || in == 'P') {
-            if(PauseMenu()) {
-                delwin(win);
-                return 0;
-            }
-        }
-           
-    }
-
-    nodelay(stdscr, FALSE);
-
-    return -1;
-
-}
-
-int PauseMenu () {
+    /*----------------------------------------------*/
+    int pauseMenu();
+    void credits();
+    void keybindsMenu();
+    void settings();
+    int titleScreen(int start_selected);
+    /*----------------------------------------------*/
+
+    int pauseMenu() {
     vector<string> options = {
         msgs[LANG_OPTION]["Resume"],
         msgs[LANG_OPTION]["Settings"],
@@ -988,279 +367,766 @@ int PauseMenu () {
 
 }
 
-void Credits () {
-    WINDOW* win = newwin(LINES,COLS,0,0);
-    nodelay(win, FALSE);
-    keypad(win, TRUE);
+    void credits() {
+        WINDOW* win = newwin(LINES,COLS,0,0);
+        nodelay(win, FALSE);
+        keypad(win, TRUE);
 
-    vector<string>message = {
-        "Title screen logo: patorjk.com/software/taag",
-        "",
-        "Made using the ncurses library",
-        "",
-        "Game created by Marco Cinieri",
-        "",
-        "",
-        "",
-        "PRESS ANY KEY TO GO BACK",
-    };
+        vector<string>message = {
+            "Title screen logo: patorjk.com/software/taag",
+            "",
+            "Made using the ncurses library",
+            "",
+            "Game created by Marco Cinieri",
+            "",
+            "",
+            "",
+            "PRESS ANY KEY TO GO BACK",
+        };
 
-    for(int i = 0; i < message.size(); i++) {
-        mvwprintw(win, win->_maxy / 2 - message.size()/2 + i, win->_maxx / 2 - message[i].length() / 2, "%s\n", message[i].c_str());
-    }
-
-    wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
-
-    wrefresh(win);
-
-    wgetch(win);
-
-    delwin(win);
-    return;
-}
-
-void KeybindsMenu () {
-    WINDOW* win = newwin(LINES,COLS,0,0);
-    keypad(win, TRUE);
-
-    vector<string> options = {
-        msgs[LANG_OPTION]["keybConfirm"],
-        msgs[LANG_OPTION]["keybToggleLighter"],
-        msgs[LANG_OPTION]["keybUp"],
-        msgs[LANG_OPTION]["keybDown"],
-        msgs[LANG_OPTION]["keybLeft"],
-        msgs[LANG_OPTION]["keybRight"],
-        msgs[LANG_OPTION]["optBack"]
-    };
-
-    vector<short> keybinds = {
-        keyConfirm,
-        keyToggleLighter,
-        keyUp,
-        keyDown,
-        keyLeft,
-        keyRight
-    };
-
-    int selected = 0, in, logo_offset = 7;
-
-    while(1) {
-        wclear(win);
-
-        for(int i = 0; i < logo.size(); i++) {
-            print_centered(win, (-logo_offset) + i, 0, logo[i]);
+        for(int i = 0; i < message.size(); i++) {
+            mvwprintw(win, win->_maxy / 2 - message.size()/2 + i, win->_maxx / 2 - message[i].length() / 2, "%s\n", message[i].c_str());
         }
-
-        for(int i = 0; i < options.size(); i++) {
-            // selection indicator
-            if(i == selected) {
-                mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, ">");
-            }
-            else mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, " ");
-            
-            if(i == options.size()-1) {
-                mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s", options[i].c_str());
-            }
-            else mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s%d (%c)", options[i].c_str(), keybinds[i], keybinds[i]);
-        }
-
-        mvwprintw(win, LINES/2 - 2 + 2*options.size()+2, COLS/2 - 38, "%s", msgs[LANG_OPTION]["msgChanges"].c_str());
 
         wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
-        wrefresh(win);
-        in = wgetch(win);
-        
-        if(in == keyDown) {
-            selected++;
-            selected%=options.size();
-        }
-        else if(in == keyUp) {
-            selected--;
-            if(selected == -1) selected = options.size()-1;
-            selected%=options.size();
-        }
-        else if(in == keyConfirm) {
 
-            if(selected == options.size()-1) {
-                keyConfirm = keybinds[0];
-                keyToggleLighter = keybinds[1];
-                keyUp = keybinds[2];
-                keyDown = keybinds[3];
-                keyLeft = keybinds[4];
-                keyRight = keybinds[5];
-                delwin(win);
-                return;
+        wrefresh(win);
+
+        wgetch(win);
+
+        delwin(win);
+        return;
+    }
+
+    void keybindsMenu() {
+        WINDOW* win = newwin(LINES,COLS,0,0);
+        keypad(win, TRUE);
+
+        vector<string> options = {
+            msgs[LANG_OPTION]["keybConfirm"],
+            msgs[LANG_OPTION]["keybToggleLighter"],
+            msgs[LANG_OPTION]["keybUp"],
+            msgs[LANG_OPTION]["keybDown"],
+            msgs[LANG_OPTION]["keybLeft"],
+            msgs[LANG_OPTION]["keybRight"],
+            msgs[LANG_OPTION]["optBack"]
+        };
+
+        vector<short> keybinds = {
+            keyConfirm,
+            keyToggleLighter,
+            keyUp,
+            keyDown,
+            keyLeft,
+            keyRight
+        };
+
+        int selected = 0, in, logo_offset = 7;
+
+        while(1) {
+            wclear(win);
+
+            for(int i = 0; i < logo.size(); i++) {
+                print_centered(win, (-logo_offset) + i, 0, logo[i]);
             }
-            
-            mvwprintw(win, LINES/2 - 2 + 2*selected, COLS/2 - 38, "%s%s", options[selected].c_str(), "_                  ");
+
+            for(int i = 0; i < options.size(); i++) {
+                // selection indicator
+                if(i == selected) {
+                    mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, ">");
+                }
+                else mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, " ");
+                
+                if(i == options.size()-1) {
+                    mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s", options[i].c_str());
+                }
+                else mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s%d (%c)", options[i].c_str(), keybinds[i], keybinds[i]);
+            }
+
+            mvwprintw(win, LINES/2 - 2 + 2*options.size()+2, COLS/2 - 38, "%s", msgs[LANG_OPTION]["msgChanges"].c_str());
+
+            wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
+            wrefresh(win);
             in = wgetch(win);
             
-            keybinds[selected] = in;
+            if(in == keyDown) {
+                selected++;
+                selected%=options.size();
+            }
+            else if(in == keyUp) {
+                selected--;
+                if(selected == -1) selected = options.size()-1;
+                selected%=options.size();
+            }
+            else if(in == keyConfirm) {
 
+                if(selected == options.size()-1) {
+                    keyConfirm = keybinds[0];
+                    keyToggleLighter = keybinds[1];
+                    keyUp = keybinds[2];
+                    keyDown = keybinds[3];
+                    keyLeft = keybinds[4];
+                    keyRight = keybinds[5];
+                    delwin(win);
+                    return;
+                }
+                
+                mvwprintw(win, LINES/2 - 2 + 2*selected, COLS/2 - 38, "%s%s", options[selected].c_str(), "_                  ");
+                in = wgetch(win);
+                
+                keybinds[selected] = in;
+
+            }
         }
+
+        
+        
+        return;
     }
 
-    
-    
-    return;
-}
+    void settings() {
 
-void Settings() {
+        WINDOW* win = newwin(LINES,COLS,0,0);
+        keypad(win, TRUE);
 
-    WINDOW* win = newwin(LINES,COLS,0,0);
-    keypad(win, TRUE);
+        vector<string> options = {
+            msgs[LANG_OPTION]["optFramerate"],
+            msgs[LANG_OPTION]["optLanguage"],
+            msgs[LANG_OPTION]["optKeybinds"],
+            msgs[LANG_OPTION]["optBack"],
+        };
 
-    vector<string> options = {
-        msgs[LANG_OPTION]["optFramerate"],
-        msgs[LANG_OPTION]["optLanguage"],
-        msgs[LANG_OPTION]["optKeybinds"],
-        msgs[LANG_OPTION]["optBack"],
-    };
+        vector<int> fps_options = {
+            15,
+            30,
+            45,
+            60,
+            75
+        };
 
-    vector<int> fps_options = {
-        15,
-        30,
-        45,
-        60,
-        75
-    };
+        vector<string> language_options = {
+            "English",
+            "Italiano"
+        };
 
-    vector<string> language_options = {
-        "English",
-        "Italiano"
-    };
+        int selected = 0, in, logo_offset = 7;
 
-    int selected = 0, in, logo_offset = 7;
+        while(1) {
 
-    while(1) {
+            wclear(win);
 
-        wclear(win);
+            for(int i = 0; i < logo.size(); i++) {
+                print_centered(win, (-logo_offset) + i, 0, logo[i]);
+            }
 
-        for(int i = 0; i < logo.size(); i++) {
-            print_centered(win, (-logo_offset) + i, 0, logo[i]);
+            for(int i = 0; i < options.size(); i++) {
+                // selection indicator
+                if(i == selected) {
+                    mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, ">");
+                }
+                else mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, " ");
+                
+                if(i == 0) {
+                    mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s%d FPS", options[i].c_str(), fps_options[FRAMES_OPTION]);
+                }
+                if(i == 1) {
+                    mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s%s", options[i].c_str(), language_options[LANG_OPTION].c_str());
+                }
+                if(i == 2 || i == 3) {
+                    mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s", options[i].c_str());
+                }
+            }
+
+            wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
+            wrefresh(win);
+            in = wgetch(win);
+            
+            if(in == keyDown) {
+                selected++;
+                selected%=options.size();
+            }
+            else if(in == keyUp) {
+                selected--;
+                if(selected == -1) selected = options.size()-1;
+                selected%=options.size();
+            }
+            else if(in == keyConfirm) {
+                switch(selected) {
+                    case 0:
+                    FRAMES_OPTION++;
+                    FRAMES_OPTION %= fps_options.size();
+                    FRAMES_PER_SECOND = fps_options[FRAMES_OPTION];
+                    REFRESH_RATE = 1000/FRAMES_PER_SECOND;
+                    break;
+
+                    case 1:
+                    LANG_OPTION++;
+                    LANG_OPTION %= language_options.size();
+                    break;
+
+                    case 2:
+                    KeybindsMenu();
+                    break;
+
+                    case 3:
+                    delwin(win);
+                    return;
+                    
+                }
+            }
+
         }
 
-        for(int i = 0; i < options.size(); i++) {
-            // selection indicator
-            if(i == selected) {
-                mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, ">");
+        
+        delwin(win);
+        return;
+
+    }
+
+    int titleScreen(int start_selected) {
+
+        WINDOW* win = newwin(LINES,COLS,0,0);
+        keypad(win, TRUE);
+
+        int in;
+
+        vector<string> options = {
+            msgs[LANG_OPTION]["optPlay"],
+            msgs[LANG_OPTION]["optSettings"],
+            msgs[LANG_OPTION]["optCredits"],
+            msgs[LANG_OPTION]["optQuit"],
+        };
+
+        int logo_offset = 7;
+        int selected = start_selected;
+
+        while(1) {
+
+            wclear(win);
+
+            for(int i = 0; i < logo.size(); i++) {
+                print_centered(win, (-logo_offset) + i, 0, logo[i]);
             }
-            else mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, " ");
-            
-            if(i == 0) {
-                mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s%d FPS", options[i].c_str(), fps_options[FRAMES_OPTION]);
-            }
-            if(i == 1) {
-                mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s%s", options[i].c_str(), language_options[LANG_OPTION].c_str());
-            }
-            if(i == 2 || i == 3) {
+
+            for(int i = 0; i < options.size(); i++) {
+                if(i == selected) {
+                    mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, ">");
+                }
+                else mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, " ");
+
                 mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s", options[i].c_str());
             }
-        }
 
-        wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
-        wrefresh(win);
-        in = wgetch(win);
-        
-        if(in == keyDown) {
-            selected++;
-            selected%=options.size();
-        }
-        else if(in == keyUp) {
-            selected--;
-            if(selected == -1) selected = options.size()-1;
-            selected%=options.size();
-        }
-        else if(in == keyConfirm) {
-            switch(selected) {
-                case 0:
-                FRAMES_OPTION++;
-                FRAMES_OPTION %= fps_options.size();
-                FRAMES_PER_SECOND = fps_options[FRAMES_OPTION];
-                REFRESH_RATE = 1000/FRAMES_PER_SECOND;
-                break;
+            wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
+            wrefresh(win);
 
-                case 1:
-                LANG_OPTION++;
-                LANG_OPTION %= language_options.size();
-                break;
+            in = wgetch(win);
 
-                case 2:
-                KeybindsMenu();
-                break;
-
-                case 3:
+            if(in == keyConfirm) {
                 delwin(win);
-                return;
-                
+                clear();
+                return selected;
+            }
+
+            if(in == keyUp) {
+                selected--;
+                if(selected == -1) selected = options.size()-1;
+                selected %= options.size();
+            }
+
+            if(in == keyDown) {
+                selected++;
+                selected %= options.size();
             }
         }
+    }
+
+};
+
+class Map {
+    private:
+
+    Player player;
+    Lightmap lightmap;
+
+    int currentRoom;
+    int currentFloor = 0;
+
+    int floorLayoutX;
+    int floorLayoutY;
+
+    floor_data floor;
+
+    public:
+
+    void changeFloor(int floor_number, string change_text) {
+
+        string floor_text = msgs[LANG_OPTION]["Floor"] + to_string(floor_number);
+        current_floor = floor_number;
+        WINDOW* txtbox = newwin(LINES,COLS,0,0);
+        print_centered(txtbox, -2, 0, floor_text.c_str());
+        print_centered(txtbox, 0, 0, change_text.c_str());
+        wborder(txtbox, '|', '|', '-', '-', '+', '+', '+', '+');
+        wrefresh(txtbox);
+        napms(2300);
+        
+        delwin(txtbox);
+        
+        return;
+    }
+
+    void changeRoom(int room_number, int x, int y) {
+    current_room = room_number;
+    auto& active_room = floors[current_floor].room[current_room];
+
+    lightmap.resize(active_room.art.size(), vector<short>(active_room.art[0].size()));
+    player_pos = {x,y};
+
+    return;
+}
+
+    void initFloorPickups(int floor_n) {
+
+        auto active_floor = floors[current_floor];
+        
+
+        switch(floor_n) {
+
+            case 0:
+
+                // spawn:
+                // 10 notes
+                // 12 lighter fuel
+                // 60-120 spikes
+
+                int rand_room, rand_line, rand_col;
+                for(int i = 0; i < 120; i++) {
+                    rand_room = rand()%active_floor.room.size();
+                    rand_line = 1 + (rand() % (active_floor.room[rand_room].art.size()-1 ) );
+                    rand_col = 2 + 2 * (rand() % (active_floor.room[rand_room].art[0].size()/2 - 1 ) );
+                    if(spawn_pickup(spike_object, i, rand_col, rand_line, rand_room) != 0) {
+                        i--;
+                    }
+                }
+                for(int i = 0; i < 10; i++) {
+                    rand_room = rand()%active_floor.room.size();
+                    rand_line = 1 + (rand() % (active_floor.room[rand_room].art.size()-1 ) );
+                    rand_col = 2 + 2 * (rand() % (active_floor.room[rand_room].art[0].size()/2 - 1 ) );
+                    if(spawn_pickup(note_pickup, i, rand_col, rand_line, rand_room) != 0) {
+                        i--;
+                    }
+                }
+
+                for(int i = 0; i < 12; i++) {
+                    rand_room = rand()%active_floor.room.size();
+                    rand_line = 1 + (rand() % (active_floor.room[rand_room].art.size()-1 ) );
+                    rand_col = 2 + 2 * (rand() % (active_floor.room[rand_room].art[0].size()/2 - 1 ) );
+                    if(spawn_pickup(lighter_fuel_pickup, 3, rand_col, rand_line, rand_room) != 0) {
+                        i--;
+                    }
+                }
+
+            break;
+
+            case 2:
+                return;
+            break;
+
+        }
+
+}
+
+    int spawnPickup(pickup p, int type, int x, int y, int room_n) {
+        auto& r = floors[current_floor].room[room_n];
+
+        if(r.pickups[y][x] != ' ' && r.pickups[y][x] != '.') {
+            return -1;
+        }
+
+        r.art[y][x] = p.icon;
+        r.colors[y][x] = p.color;
+        r.events[y][x] = p.ID;
+        r.pickups[y][x] = type;
+
+        return 0;
 
     }
+
+    void resetTile(int x, int y) {
+        auto& r = floors[current_floor].room[current_room];
+
+        r.art[y][x] = floor_art_source[current_floor][current_room][y][x];
+        r.colors[y][x] = floor_colors_source[current_floor][current_room][y][x];
+        r.events[y][x] = floor_events_source[current_floor][current_room][y][x];
+        r.pickups[y][x] = floor_pickups_source[current_floor][current_room][y][x];
+    }
+
+    Player getPlayer() {
+        return player;
+    }
+
+    Lightmap getLightmap() {
+        return lightmap;
+    }
+
+};
+
+class Game {
+
+    private:
+
+    Map map;
+    GUI gui;
+
+    public:
+
+    void loadFloor(Player plr, int floor_n) {
+    
+        floor.room.resize(floor_art_source[floor_n].size());
+        floor.layout = floor_layout_source[floor_n];
+
+        for(int i = 0; i < floor_art_source[floor_n].size(); i++) {
+            floor.room[i].art = floor_art_source[floor_n][i];
+            floor.room[i].collisions = floor_collisions_source[floor_n][i];
+            floor.room[i].colors = floor_colors_source[floor_n][i];
+            floor.room[i].events = floor_events_source[floor_n][i];
+            floor.room[i].lights = floor_lights_source[floor_n][i];
+            floor.room[i].entities = floor_entities_source[floor_n][i];
+            floor.room[i].pickups = floor_pickups_source[floor_n][i];
+        }
+        change_room(floor_starting_rooms[floor_n], floor_starting_x[floor_n], floor_starting_y[floor_n]);
+        
+        coord playerPos = plr.getPos();
+        playerPos.x = floor_starting_x[floor_n];
+        playerPos.y = floor_starting_y[floor_n];
+
+        return;
+    }  
+
+    void Introduction () {
+    
+    //wip
+    //WINDOW* txtbox = newwin(LINES,COLS,0,0);
+    //wattron(txtbox, COLOR_PAIR(2));
+    //print_centered(txtbox, -2, 0, msgs[LANG_OPTION]["IntroductoryText1"]);
+    //print_centered(txtbox, 0, 0, msgs[LANG_OPTION]["IntroductoryText2"]);
+    //print_centered(txtbox, 2, 0, msgs[LANG_OPTION]["IntroductoryText3"]);
+    //print_centered(txtbox, 4, 0, msgs[LANG_OPTION]["IntroductoryText4"]);
+    //wattroff(txtbox, COLOR_PAIR(2));
+
+    //wborder(txtbox, '|', '|', '-', '-', '+', '+', '+', '+');
+    //wrefresh(txtbox);
+    //wgetch(txtbox);
 
     
-    delwin(win);
+
+    //wclear(txtbox);
+    //print_centered(txtbox, 0, 0, msgs[LANG_OPTION]["IntroductoryText5"]);
+    //wborder(txtbox, '|', '|', '-', '-', '+', '+', '+', '+');
+    //wgetch(txtbox);
+
+    //delwin(txtbox);
+    
     return;
-
 }
 
-int TitleScreen(int start_selected) {
+    int game () {
 
-    WINDOW* win = newwin(LINES,COLS,0,0);
-    keypad(win, TRUE);
-
-    int in;
-
-    vector<string> options = {
-        msgs[LANG_OPTION]["optPlay"],
-        msgs[LANG_OPTION]["optSettings"],
-        msgs[LANG_OPTION]["optCredits"],
-        msgs[LANG_OPTION]["optQuit"],
-    };
-
-    int logo_offset = 7;
-    int selected = start_selected;
-
-    while(1) {
-
-        wclear(win);
-
-        for(int i = 0; i < logo.size(); i++) {
-            print_centered(win, (-logo_offset) + i, 0, logo[i]);
+        if(!load_save_file()) {
+            Introduction();
         }
 
-        for(int i = 0; i < options.size(); i++) {
-            if(i == selected) {
-                mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, ">");
-            }
-            else mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 40, " ");
-
-            mvwprintw(win, LINES/2 - 2 + 2*i, COLS/2 - 38, "%s", options[i].c_str());
-        }
-
+        WINDOW* win = newwin((int)LINES * 0.75, COLS,0,0); // screen
+        nodelay(stdscr, TRUE);
+        keypad(win, TRUE);
+        WINDOW* message_log = newwin((int)LINES * 0.25, (int)COLS,LINES * 0.75, 0);
         wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
+        wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
         wrefresh(win);
+        wrefresh(message_log);
+        
+        string floor_splash = "Floor"; floor_splash += (char)current_floor+48; floor_splash += "Splash";
 
-        in = wgetch(win);
+        change_floor(current_floor, msgs[LANG_OPTION][floor_splash]);
+        change_room(current_room, player_pos.x, player_pos.y);
 
-        if(in == keyConfirm) {
-            delwin(win);
-            clear();
-            return selected;
+        init_floor_pickups(current_floor);
+        
+        unsigned int frame = 0;
+
+        int in;
+        int last_tick_lines = LINES, last_tick_cols = COLS;
+        wchar_t spinning_wheel = '/';
+
+        flushinp();
+
+        while(1) {
+
+            if(health <= 0) {
+                return 1;
+            }
+
+            // handle screen resizing
+            if(last_tick_cols != COLS || last_tick_lines != LINES) {
+                delwin(win);
+                delwin(message_log);
+
+                win = newwin((int)LINES * 0.75, COLS,0,0); // screen
+                nodelay(stdscr, TRUE);
+                keypad(win, TRUE);
+
+                message_log = newwin((int)LINES * 0.25, (int)COLS,LINES * 0.75, 0);
+
+                wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
+            }
+            if(frame%20 == 0) {
+                last_tick_lines = LINES;
+                last_tick_cols = COLS;
+            }
+
+            napms(REFRESH_RATE);
+            frame++;
+            wclear(win);
+            
+            // lighting and lighter fuel
+            {
+
+            auto& active_room = floors[current_floor].room[current_room];
+            int active_room_lines = active_room.art.size();
+            int active_room_cols = active_room.art[0].size();
+
+            clear_lightmap();
+
+            if(lighter_on) {
+                cast_light(player_pos.x, player_pos.y, lighter_strength);
+                lighter_fuel -= lighter_fuel_consumption/FRAMES_PER_SECOND;
+                if(lighter_fuel <= 0) {
+                    lighter_on = false;
+                }
+            }
+            else {
+                lighter_fuel += lighter_fuel_regen/FRAMES_PER_SECOND;
+                lighter_fuel = min(lighter_fuel, max_lighter_fuel);
+            }
+
+            for(int i = 0; i < active_room_lines; i++) {
+                for(int j = 0; j < active_room_cols; j++) {
+
+                    if(active_room.lights[i][j] == 46) {
+                        continue;
+                    }
+
+                    if(active_room.lights[i][j]-48 > 0) {
+                        cast_light(j, i, active_room.lights[i][j]-48);
+                    }
+
+                }
+            }
+            
+            for(int i = 0; i < active_room_lines; i++) {
+                
+                wmove(win, (LINES-active_room_lines-((int)LINES*0.25))/2+i, (COLS-active_room_cols)/2);
+
+                for(int j = 0; j < active_room_cols; j++) {
+                    
+                    if(lightmap[i][j] == 0 || lightmap[i][j] == 1) {
+                        wattron(win, COLOR_PAIR(1));
+                        wprintw(win, " ");
+                        wattroff(win, COLOR_PAIR(1));
+                        continue;
+                    }
+
+                    if(i == player_pos.y && j == player_pos.x) {
+                        wattron(win, COLOR_PAIR(lightmap[i][j]));
+                        wprintw(win, "%c", player_icon);
+                        wattroff(win, COLOR_PAIR(lightmap[i][j]));
+                        continue;
+                    }
+
+                    int attr_number;
+                    switch(active_room.colors[i][j]) {
+                            case 'R':
+                            wattron(win, COLOR_PAIR(10+(lightmap[i][j]==3)*10));
+                            attr_number = 10+(lightmap[i][j]==3)*10;
+                            break;
+                            case 'G':
+                            wattron(win, COLOR_PAIR(11+(lightmap[i][j]==3)*10));
+                            attr_number = 11+(lightmap[i][j]==3)*10;
+                            break;
+                            case 'B':
+                            wattron(win, COLOR_PAIR(12+(lightmap[i][j]==3)*10));
+                            attr_number = 12+(lightmap[i][j]==3)*10;
+                            break;
+                            case 'Y':
+                            wattron(win, COLOR_PAIR(13)+(lightmap[i][j]==3)*10);
+                            attr_number = 13+(lightmap[i][j]==3)*10;
+                            break;
+                            case 'M':
+                            wattron(win, COLOR_PAIR(14)+(lightmap[i][j]==3)*10);
+                            attr_number = 14+(lightmap[i][j]==3)*10;
+                            break;
+                            case 'C':
+                            wattron(win, COLOR_PAIR(15+(lightmap[i][j]==3)*10));
+                            attr_number = 15+(lightmap[i][j]==3)*10;
+                            break;
+                            case 'g':
+                            wattron(win, COLOR_PAIR(2));
+                            attr_number = 2;
+                            break;
+                            default:
+                            wattron(win, COLOR_PAIR(lightmap[i][j]));
+                            attr_number = lightmap[i][j];
+                            break;
+                    }
+
+                    wprintw(win, "%lc", active_room.art[i][j]);
+                    wattroff(win, attr_number);
+                    
+                }
+                wprintw(win, "\n");
+            }
+            
+
+            }
+
+            if(DEBUG_MODE == 1) {
+                wprintw(win, "\n\n");
+                wattron(win, COLOR_PAIR(3));
+                for(int i = 0; i < lightmap.size(); i++) {
+                    for(int j = 0; j < lightmap[0].size(); j++) {
+                        wprintw(win, "%d", lightmap[i][j]);
+                    }
+                    wprintw(win, "\n");
+                }
+                wattroff(win, COLOR_PAIR(3));
+                wprintw(win, "%d %d", lightmap.size(), lightmap[0].size());
+            }
+            if(DEBUG_MODE == 2) {
+                wattron(win, COLOR_PAIR(3));
+                wprintw(win, "\n\nx: %d y: %d, frame %u, FPS = %d\n", player_pos.x, player_pos.y, frame, FRAMES_PER_SECOND);
+                wattroff(win, COLOR_PAIR(3));
+            }
+            if(DEBUG_MODE == 3) {
+                wattron(win, COLOR_PAIR(3));
+                wprintw(win, "\n\n%s\n", floors[current_floor].room[current_room].art[0].c_str());
+                wattroff(win, COLOR_PAIR(3));
+            }
+            if(DEBUG_MODE == 4) {
+                mvwprintw(message_log, 2, COLS * 0.91, "%f", lighter_fuel);
+                mvwprintw(message_log, 2, COLS * 0.20, "%d", in);
+                mvwprintw(message_log, 2, COLS * 0.25, "%d", current_room);
+            }
+
+            wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
+            wrefresh(win);
+            wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
+            wrefresh(message_log);
+            wclear(message_log);
+            print_messages(message_log);
+
+            // lighter fuel and health GUI
+            {
+                mvwprintw(message_log, 2, COLS * 0.88, msgs[LANG_OPTION]["Fuel"].c_str());
+                int consumption_speed = FRAMES_PER_SECOND/(lighter_fuel_consumption*4);
+                int regen_speed = (FRAMES_PER_SECOND/(lighter_fuel_regen*4));
+
+                if(frame % (consumption_speed == 0 ? 1 : consumption_speed) == 0) {
+                    if(lighter_on) {
+                        spinning_wheel = spin_counterclockwise(spinning_wheel);
+                    }
+
+                }
+
+                if(frame % (regen_speed == 0 ? 1 : consumption_speed) == 0) {
+                    if(!lighter_on && lighter_fuel < max_lighter_fuel){
+                        spinning_wheel = spin_clockwise(spinning_wheel);
+                    } 
+                }
+
+                mvwprintw(message_log, 2, COLS * 0.88 - 2, "%lc", spinning_wheel);
+
+                for(int i = 0; i < max_lighter_fuel; i+=5) {
+                    // █ ▓ ░ ▮▯
+                    if(lighter_fuel - i <= 0) {
+                        mvwprintw(message_log, 3, COLS * 0.88 + i/5, "░");
+                    }
+                    else if(lighter_fuel - i < 5) {
+                        mvwprintw(message_log, 3, COLS * 0.88 + i/5, "█");
+                    }
+                    else if(lighter_fuel - i >= 5) {
+                        mvwprintw(message_log, 3, COLS * 0.88 + i/5, "█");
+                    }
+                }
+
+                mvwprintw(message_log, 6, COLS * 0.88, msgs[LANG_OPTION]["Health"].c_str());
+                for(int i = 0; i < max_health; i+=5) {
+                    if(health - i <= 0) {
+                        mvwprintw(message_log, 7, COLS * 0.88 + i/5, "░");
+                    }
+                    else if(health - i < 5) {
+                        mvwprintw(message_log, 7, COLS * 0.88 + i/5, "█");
+                    }
+                    else if(health - i >= 5) {
+                        mvwprintw(message_log, 7, COLS * 0.88 + i/5, "█");
+                    }
+                }
+
+            }
+
+            in = getch();
+            if(in != -1) {
+                move_player(in);
+            }
+
+            if(in == 'p' || in == 'P') {
+                if(PauseMenu()) {
+                    delwin(win);
+                    return 0;
+                }
+            }
+            
         }
 
-        if(in == keyUp) {
-            selected--;
-            if(selected == -1) selected = options.size()-1;
-            selected %= options.size();
-        }
+        nodelay(stdscr, FALSE);
 
-        if(in == keyDown) {
-            selected++;
-            selected %= options.size();
-        }
+        return -1;
+
     }
-}
+
+    void death_sequence() {
+        WINDOW* win = newwin(LINES, COLS, 0, 0);
+        keypad(win, true);
+
+        wbkgd(win, COLOR_PAIR(7));
+        wrefresh(win);
+        napms(1200);
+
+        wbkgd(win, COLOR_PAIR(3));
+        print_centered(win, -5, 0, "You lost!");
+        wrefresh(win);
+        napms(1000);
+        print_centered(win, -3, 0, "Died from: ?");
+        wrefresh(win);
+        napms(1000);
+        print_centered(win, -1, 0, "Score: ?");
+        wrefresh(win);
+        napms(1000);
+        print_centered(win, 1, 0, "Press any key to continue");
+        flushinp();
+        wgetch(win);
+
+
+        delwin(win);
+
+        return;
+    }
+
+    void win_sequence() {
+        return;
+    }
+
+
+};
 
 int main () {
 
@@ -1302,6 +1168,8 @@ int main () {
     init_pair(25, COLOR_CYAN+8, COLOR_BLACK);
 
     load_floor(0);
+
+    
 
     int in = 0, res;
 

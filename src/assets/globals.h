@@ -3,6 +3,9 @@ typedef struct coord {
     int y;
 }coord;
 
+int currentRoom;
+int currentFloor;
+
 float REFRESH_RATE = 16.666666;
 int FRAMES_PER_SECOND = (1000/REFRESH_RATE);
 int LANG_OPTION = 0;

@@ -17,4 +17,4 @@ class floor_data {
     public:
     vector<room_data>room;
     vector<string> layout;
-}
+};

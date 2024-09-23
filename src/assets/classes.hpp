@@ -2,6 +2,7 @@
 #include <queue>
 #include <string>
 #include <cstring>
+#include <climits>
 #include <algorithm>
 #include <list>
 #include <ncurses.h>
@@ -169,8 +170,9 @@ class TxtBox {
     public:
 
     TxtBox(char* message) {
-        print_centered()
-    }
-}
+        // placeholder
+        int a;
+    };
+};
 ////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////

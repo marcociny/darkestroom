@@ -1,4 +1,5 @@
 #include "classes.hpp"
+#include <chrono>
 
 void MessageLog::printMessages(WINDOW* win) {
     wattron(win, A_BOLD);
@@ -205,7 +206,7 @@ void GUI::keybindsMenu() {
     int selected = 0, in, logo_offset = 7;
 
     while(1) {
-        wclear(win);
+        werase(win);
 
         for(int i = 0; i < logo.size(); i++) {
             print_centered(win, (-logo_offset) + i, 0, logo[i]);
@@ -294,7 +295,7 @@ void GUI::settings() {
 
     while(1) {
 
-        wclear(win);
+        werase(win);
 
         for(int i = 0; i < logo.size(); i++) {
             print_centered(win, (-logo_offset) + i, 0, logo[i]);
@@ -384,7 +385,7 @@ int GUI::titleScreen(int start_selected) {
 
     while(1) {
 
-        wclear(win);
+        werase(win);
 
         for(int i = 0; i < logo.size(); i++) {
             print_centered(win, (-logo_offset) + i, 0, logo[i]);
@@ -406,7 +407,7 @@ int GUI::titleScreen(int start_selected) {
 
         if(in == keyConfirm) {
             delwin(win);
-            clear();
+            erase();
             return selected;
         }
 
@@ -762,7 +763,7 @@ int Game::update (WINDOW* win, WINDOW* message_log) {
     wrefresh(win);
     wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
     wrefresh(message_log);
-    wclear(message_log);
+    werase(message_log);
     messageLog.printMessages(message_log);
 
     // lighter fuel and health GUI
@@ -771,23 +772,23 @@ int Game::update (WINDOW* win, WINDOW* message_log) {
         int consumption_speed = FRAMES_PER_SECOND/(player.lighterFuelConsumption*4);
         int regen_speed = (FRAMES_PER_SECOND/(player.lighterFuelRegen*4));
 
-        if(frame % (consumption_speed == 0 ? 1 : consumption_speed) == 0) {
-            if(player.isLighterOn()) {
-                spinning_wheel = spin_counterclockwise(spinning_wheel);
-            }
 
-        }
-
-        if(frame % (regen_speed == 0 ? 1 : consumption_speed) == 0) {
-            if(!player.isLighterOn() && player.lighterFuel < player.maxLighterFuel){
-                spinning_wheel = spin_clockwise(spinning_wheel);
-            } 
-        }
-
-        mvwprintw(message_log, 2, COLS * 0.88 - 2, "%lc", spinning_wheel);
 
         // lighter fuel bar rendering
         if(ENABLE_LIGHTER_BAR) {
+            if(frame % (consumption_speed == 0 ? 1 : consumption_speed) == 0) {
+                if(player.isLighterOn()) {
+                    spinning_wheel = spin_counterclockwise(spinning_wheel);
+                }
+
+            }
+            if(frame % (regen_speed == 0 ? 1 : consumption_speed) == 0) {
+                if(!player.isLighterOn() && player.lighterFuel < player.maxLighterFuel){
+                    spinning_wheel = spin_clockwise(spinning_wheel);
+                } 
+            }
+
+            mvwprintw(message_log, 2, COLS * 0.88 - 2, "%lc", spinning_wheel);
             mvwprintw(message_log, 2, COLS * 0.88, msgs[LANG_OPTION]["Fuel"].c_str());
             for(int i = 0; i < player.maxLighterFuel; i+=5) {
                 // █ ▓ ░ ▮▯
@@ -861,13 +862,16 @@ int Game::gameMain () {
     flushinp();
 
     while(1) {
+        auto time_begin = chrono::steady_clock::now();
         int status_code = game.update(win, message_log);
+        auto time_end = chrono::steady_clock::now();
         
         if(status_code != 0) {
             return status_code;
         }
 
-        napms(REFRESH_RATE);
+        auto total_elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(time_end - time_begin).count();
+        napms(REFRESH_RATE - total_elapsed_time);
     }
 
     nodelay(stdscr, FALSE);

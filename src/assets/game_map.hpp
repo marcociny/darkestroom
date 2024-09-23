@@ -1,3 +1,4 @@
+// This file is used to group every map component into one.
 #include <vector>
 #include <string>
 #include "floor_data.h"

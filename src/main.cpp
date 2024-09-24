@@ -1,4 +1,4 @@
-#include "assets/methods.hpp"
+#include "include/methods.hpp"
 #include <ctime>
 #include <ncurses.h>
 

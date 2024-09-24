@@ -7,10 +7,10 @@
 #include <list>
 #include <ncurses.h>
 #include <locale.h>
-#include "globals.h"
-#include "logo.h"
-#include "messages.h"
-#include "game_map.hpp"
+#include "globals.hpp"
+#include "../assets/logo.hpp"
+#include "../assets/messages.hpp"
+#include "../assets/game_map.hpp"
 #include "spinning_wheel.cpp"
 
 #define DEBUG_MODE 4 // 0 - 4

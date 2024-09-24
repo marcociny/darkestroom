@@ -2,7 +2,8 @@
 #include <fstream>
 #include <filesystem>
 #include <string>
-#include "globals.h"
+#include "globals.hpp"
+#include "classes.hpp"
 
 using namespace std;
 

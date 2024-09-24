@@ -1,6 +1,12 @@
 #include "include/methods.hpp"
 #include <ctime>
-#include <ncurses.h>
+#ifdef _WIN32
+    #include <ncurses/ncurses.h>
+#elif __linux__
+    #include <ncurses.h>
+#else
+    #error "OS not supported!"
+#endif
 
 using namespace std;
 

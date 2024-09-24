@@ -901,25 +901,25 @@ void Game::eventHandler(int x, int y) {
         case 'a': // move a room left
             new_room = (int)gameMap.floor.layout[gameMap.floorLayoutY][--gameMap.floorLayoutX]-48;
             gameMap.changeRoom(new_room, active_room_cols-3, playerPos.y);
-
+            // find 'c', go left by one.
         break;
 
         case 'b': // move a room up
             new_room = (int)gameMap.floor.layout[--gameMap.floorLayoutY][gameMap.floorLayoutX]-48;
             gameMap.changeRoom(new_room, playerPos.x, active_room_lines-2);
-
+            // find 'd', go up by one.
         break;
 
         case 'c': // move a room right
             new_room = (int)gameMap.floor.layout[gameMap.floorLayoutY][++gameMap.floorLayoutX]-48;
             gameMap.changeRoom(new_room, 2, playerPos.y);
-
+            // find 'a', go right by one.
         break;
 
         case 'd': // move a room down
             new_room = (int)gameMap.floor.layout[++gameMap.floorLayoutY][gameMap.floorLayoutX]-48;
             gameMap.changeRoom(new_room, playerPos.x, 1);
-            
+            // find 'b', go down by one.
         break;
         
 
@@ -1014,9 +1014,9 @@ void Player::move(int& in) {
 
     int x = 0, y = 0;
 
-    if(in == keyLeft){ x-=2; player.facingDirection = 4;}
+    if(in == keyLeft){ x--; player.facingDirection = 4;}
     else if(in == keyUp){ y--; player.facingDirection = 2;}
-    else if(in == keyRight){ x+=2; player.facingDirection = 5;}
+    else if(in == keyRight){ x++; player.facingDirection = 5;}
     else if(in == keyDown){ y++; player.facingDirection = 7;}
 
     if(in == keyToggleLighter) {

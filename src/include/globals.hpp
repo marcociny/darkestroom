@@ -15,5 +15,5 @@ bool ENABLE_LIGHTER_BAR = false;
 bool ENABLE_HEALTH_BAR = false;
 
 char keyConfirm = 'z';
-char keyToggleLighter = 'x';
+char keyDeny = 'x';
 short keyUp = 0403, keyDown = 0402, keyLeft = 0404, keyRight = 0405;

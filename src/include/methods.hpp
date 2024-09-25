@@ -1,3 +1,4 @@
+#pragma once
 #include "classes.hpp"
 #include <chrono>
 
@@ -109,7 +110,7 @@ int GUI::pauseMenu() {
 
         int in = wgetch(win);
 
-        if(in == keyToggleLighter) {
+        if(in == keyDeny) {
             delwin(win);
             return 0;
         }
@@ -196,7 +197,7 @@ void GUI::keybindsMenu() {
 
     vector<short> keybinds = {
         keyConfirm,
-        keyToggleLighter,
+        keyDeny,
         keyUp,
         keyDown,
         keyLeft,
@@ -244,7 +245,7 @@ void GUI::keybindsMenu() {
 
             if(selected == options.size()-1) {
                 keyConfirm = keybinds[0];
-                keyToggleLighter = keybinds[1];
+                keyDeny = keybinds[1];
                 keyUp = keybinds[2];
                 keyDown = keybinds[3];
                 keyLeft = keybinds[4];
@@ -424,14 +425,45 @@ int GUI::titleScreen(int start_selected) {
     }
 }
 
-void GUI::sendMessageBox(const char* message, int style, int border_style, int border_color) {
+void GUI::sendMessageBox(const char* message, int border_style, int border_color, int text_color) {
     WINDOW* messageBox = newwin(10, 60, LINES/2-5, COLS/2-30);
-    wborder(messageBox, '|', '|', '-', '-', '+', '+', '+', '+');
+    switch(border_style) {
+        case 0:
+            wborder(messageBox, '|', '|', '-', '-', '+', '+', '+', '+');
+        break;
+        case 1:
+            for(int i = 1; i < 59; i++) {
+                mvwprintw(messageBox, 0, i, "%lc", L'─');
+                mvwprintw(messageBox, 9, i, "%lc", L'─');
+            }
+            for(int i = 0; i < 10; i++) {
+                mvwprintw(messageBox, i, 0, "%lc", L'│');
+                mvwprintw(messageBox, i, 59, "%lc", L'│');
+            }
+            mvwprintw(messageBox, 0, 0, "%lc", L'┌');
+            mvwprintw(messageBox, 0, 59, "%lc", L'┐');
+            mvwprintw(messageBox, 9, 0, "%lc", L'└');
+            mvwprintw(messageBox, 9, 59, "%lc", L'┘');
+            
+            // V cringe and doesnt work V
+            //wborder(messageBox, L'│', L'│', L'─', L'┌', L'┐', L'└', L'┘');
+        break;
+        case 2:
+            wborder(messageBox, '|', '|', '-', '-', '+', '+', '+', '+');
+        break;
+    }
+    
     string a = "Lorem ipsum dolor sit amet....";
     mvwprintw(messageBox, 1, 2, a.c_str());
     mvwprintw(messageBox, 3, 2, a.c_str());
     wrefresh(messageBox);
-    napms(1000);
+    back:
+    int in = wgetch(messageBox);
+    if(in != keyConfirm && in != keyDeny) {
+        goto back;
+    }
+    delwin(messageBox);
+    return;
 }
 
 void Map::changeFloor(int floor_number, string change_text) {
@@ -724,24 +756,10 @@ int Game::update (WINDOW* win, WINDOW* message_log) {
         return 2;
     }
 
-    // handle screen resizing
-    /*if(last_tick_cols != COLS || last_tick_lines != LINES) {
-        
-        delwin(win);
-        delwin(message_log);
-
-        win = newwin((int)LINES * 0.75, COLS,0,0); // screen
-        nodelay(stdscr, TRUE);
-        keypad(win, TRUE);
-
-        message_log = newwin((int)LINES * 0.25, (int)COLS, LINES * 0.75, 0);
-
-        //wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
+    // debug
+    if(frame == 120) {
+        gui.sendMessageBox("asd",1, 0, 0);
     }
-    if(frame%(FRAMES_PER_SECOND/4) == 0) {
-        last_tick_cols = COLS;
-        last_tick_lines = LINES;
-    }*/
 
     frame++;
     
@@ -879,9 +897,6 @@ int Game::gameMain () {
     string floor_splash = "Floor"; floor_splash += (char)currentFloor+48; floor_splash += "Splash";
 
     coord playerPos = player.getPos();
-
-    string a = "ciao";
-    gui.sendMessageBox(a.c_str(), 0, 0, 0);
 
     flushinp();
 
@@ -1047,7 +1062,7 @@ void Player::move(int& in) {
     else if(in == keyRight){ x++; player.facingDirection = 5;}
     else if(in == keyDown){ y++; player.facingDirection = 7;}
 
-    if(in == keyToggleLighter) {
+    if(in == keyDeny) {
         player.toggleLighter();
         return;
     }
@@ -1099,7 +1114,7 @@ void Game::renderMap(WINDOW *win) {
 
             if(i == playerPos.y && j == playerPos.x) {
                 wattron(win, COLOR_PAIR(gameMap.lightmap[i][j]));
-                wprintw(win, "%c", player.icon);
+                wprintw(win, "%lc", player.icon);
                 wattroff(win, COLOR_PAIR(gameMap.lightmap[i][j]));
                 continue;
             }

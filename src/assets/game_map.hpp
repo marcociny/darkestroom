@@ -1,4 +1,5 @@
 // This file is used to group every map component into one.
+#pragma once
 #include <vector>
 #include <string>
 #include "floor_data.hpp"

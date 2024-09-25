@@ -1,3 +1,4 @@
+#pragma once
 #include <vector>
 #include <queue>
 #include <string>
@@ -12,6 +13,7 @@
 #include "../assets/messages.hpp"
 #include "../assets/game_map.hpp"
 #include "spinning_wheel.cpp"
+#include "custom_ncurses.hpp"
 
 #define DEBUG_MODE 4 // 0 - 4
 
@@ -54,7 +56,7 @@ class Player {
 
     public:
 
-    char icon = '@';
+    wchar_t icon = L'@';
     short facingDirection = 2;
 
     int health = ENABLE_HEALTH_BAR == true ? 20 : INT_MAX/2;

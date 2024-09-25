@@ -424,6 +424,15 @@ int GUI::titleScreen(int start_selected) {
     }
 }
 
+void GUI::sendMessageBox(const char* message, int style, int border_style, int border_color) {
+    WINDOW* messageBox = newwin(10, 60, LINES/2-5, COLS/2-30);
+    wborder(messageBox, '|', '|', '-', '-', '+', '+', '+', '+');
+    string a = "Lorem ipsum dolor sit amet....";
+    mvwprintw(messageBox, 1, 2, a.c_str());
+    mvwprintw(messageBox, 3, 2, a.c_str());
+    wrefresh(messageBox);
+    napms(1000);
+}
 
 void Map::changeFloor(int floor_number, string change_text) {
 
@@ -870,7 +879,10 @@ int Game::gameMain () {
     string floor_splash = "Floor"; floor_splash += (char)currentFloor+48; floor_splash += "Splash";
 
     coord playerPos = player.getPos();
-    
+
+    string a = "ciao";
+    gui.sendMessageBox(a.c_str(), 0, 0, 0);
+
     flushinp();
 
     while(1) {
@@ -932,6 +944,10 @@ void Game::eventHandler(int x, int y) {
             new_room = (int)gameMap.floor.layout[++gameMap.floorLayoutY][gameMap.floorLayoutX]-48;
             gameMap.changeRoom(new_room, playerPos.x, 1);
             // find 'b', go down by one.
+        break;
+
+        case 'n':
+            gameMap.changeFloor(0, (char*)"sus");
         break;
         
 

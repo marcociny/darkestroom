@@ -94,6 +94,7 @@ class GUI {
     void keybindsMenu();
     void settings();
     int titleScreen(int start_selected);
+    void sendMessageBox(const char*, int, int, int);
     /*----------------------------------------------*/
 }gui;
 
@@ -166,13 +167,5 @@ class Enemy {
     /*----------------------------------------------*/
 };
 
-class TxtBox {
-    public:
-
-    TxtBox(char* message) {
-        // placeholder
-        int a;
-    };
-};
 ////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////

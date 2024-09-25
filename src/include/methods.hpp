@@ -509,6 +509,10 @@ int Map::spawnPickup(pickup p, int type, int x, int y, int room_n) {
     }
 
     r.art[y][x] = p.icon;
+    int n = x;
+    if(player.getPos().x % 2 == 0) {
+        n += 1;
+    }
     r.colors[y][x] = p.color;
     r.events[y][x] = p.ID;
     r.pickups[y][x] = type;
@@ -573,61 +577,67 @@ void Map::_castLight(int x, int y, int direction, int radius, int depth, vector<
     if(active_room.collisions[y][x] == 'X') return;
     if(depth >= radius) return;
 
+    // bad hack; will not fix
+    int n = x;
+    if(player.getPos().x % 2 == 0) {
+        n += 1;
+    }
+
     // 1 2 3
     // 4 0 5
     // 6 7 8
     switch(direction) {
         case 0:
-        _castLight(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
+        _castLight(x-1, y-1, 1, radius, depth+1+(n%2), visited);
         _castLight(x, y-1, 2, radius, depth+1, visited);
-        _castLight(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
+        _castLight(x+1, y-1, 3, radius, depth+1+(n%2), visited);
 
-        _castLight(x-1, y, 4, radius, depth+!(x%2), visited);
-        _castLight(x+1, y, 5, radius, depth+!(x%2), visited);
+        _castLight(x-1, y, 4, radius, depth+(n%2), visited);
+        _castLight(x+1, y, 5, radius, depth+(n%2), visited);
         
-        _castLight(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
+        _castLight(x-1, y+1, 6, radius, depth+1+(n%2), visited);
         _castLight(x, y+1, 7, radius, depth+1, visited);
-        _castLight(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
+        _castLight(x+1, y+1, 8, radius, depth+1+(n%2), visited);
         return;
 
         case 1:
-        _castLight(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
+        _castLight(x-1, y-1, 1, radius, depth+1+(n%2), visited);
         return;
         
         case 2:
-        _castLight(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
+        _castLight(x-1, y-1, 1, radius, depth+1+(n%2), visited);
         _castLight(x, y-1, 2, radius, depth+1, visited);
-        _castLight(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
+        _castLight(x+1, y-1, 3, radius, depth+1+(n%2), visited);
         return;
 
         case 3:
-        _castLight(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
+        _castLight(x+1, y-1, 3, radius, depth+1+(n%2), visited);
         return;
 
         case 4:
-        _castLight(x-1, y-1, 1, radius, depth+1+!(x%2), visited);
-        _castLight(x-1, y, 4, radius, depth+!(x%2), visited);
-        _castLight(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
+        _castLight(x-1, y-1, 1, radius, depth+1+(n%2), visited);
+        _castLight(x-1, y, 4, radius, depth+(n%2), visited);
+        _castLight(x-1, y+1, 6, radius, depth+1+(n%2), visited);
         return;
 
         case 5:
-        _castLight(x+1, y-1, 3, radius, depth+1+!(x%2), visited);
-        _castLight(x+1, y, 5, radius, depth+!(x%2), visited);
-        _castLight(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
+        _castLight(x+1, y-1, 3, radius, depth+1+(n%2), visited);
+        _castLight(x+1, y, 5, radius, depth+(n%2), visited);
+        _castLight(x+1, y+1, 8, radius, depth+1+(n%2), visited);
         return;
 
         case 6:
-        _castLight(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
+        _castLight(x-1, y+1, 6, radius, depth+1+(n%2), visited);
         return;
 
         case 7:
-        _castLight(x-1, y+1, 6, radius, depth+1+!(x%2), visited);
+        _castLight(x-1, y+1, 6, radius, depth+1+(n%2), visited);
         _castLight(x, y+1, 7, radius, depth+1, visited);
-        _castLight(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
+        _castLight(x+1, y+1, 8, radius, depth+1+(n%2), visited);
         return;
 
         case 8:
-        _castLight(x+1, y+1, 8, radius, depth+1+!(x%2), visited);
+        _castLight(x+1, y+1, 8, radius, depth+1+(n%2), visited);
         return;
 
     }

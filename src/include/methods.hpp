@@ -701,12 +701,13 @@ int Game::update (WINDOW* win, WINDOW* message_log) {
 
     coord playerPos = player.getPos();
 
-    if(player.health <= 0) {
+    if(player.health <= 0) { // death check
         return 2;
     }
 
     // handle screen resizing
-    if(last_tick_cols != COLS || last_tick_lines != LINES) {
+    /*if(last_tick_cols != COLS || last_tick_lines != LINES) {
+        
         delwin(win);
         delwin(message_log);
 
@@ -714,14 +715,14 @@ int Game::update (WINDOW* win, WINDOW* message_log) {
         nodelay(stdscr, TRUE);
         keypad(win, TRUE);
 
-        message_log = newwin((int)LINES * 0.25, (int)COLS,LINES * 0.75, 0);
+        message_log = newwin((int)LINES * 0.25, (int)COLS, LINES * 0.75, 0);
 
-        wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
+        //wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
     }
-    if(frame%20 == 0) {
-        last_tick_lines = LINES;
+    if(frame%(FRAMES_PER_SECOND/4) == 0) {
         last_tick_cols = COLS;
-    }
+        last_tick_lines = LINES;
+    }*/
 
     frame++;
     
@@ -760,9 +761,10 @@ int Game::update (WINDOW* win, WINDOW* message_log) {
     }
 
     wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
-    wrefresh(win);
     wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
     wrefresh(message_log);
+    wrefresh(win);
+
     werase(message_log);
     messageLog.printMessages(message_log);
 

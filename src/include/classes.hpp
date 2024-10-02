@@ -96,7 +96,8 @@ class GUI {
     void keybindsMenu();
     void settings();
     int titleScreen(int start_selected);
-    void sendMessageBox(const char*, int, int, int);
+    void sendMessageBox(wstring, int, int, int);
+    void setCG(int);
     /*----------------------------------------------*/
 }gui;
 
@@ -144,6 +145,7 @@ class Game {
     void winSequence();
     void renderMap(WINDOW *win);
     void initPlayer();
+    void validateScreenSize();
     /*----------------------------------------------*/
 
 }game;

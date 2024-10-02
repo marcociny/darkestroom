@@ -79,7 +79,6 @@ bool Player::isLighterOn() {
     return lighterOn;
 }
 
-
 int GUI::pauseMenu() {
     vector<string> options = {
         msgs[LANG_OPTION]["Resume"],
@@ -425,37 +424,36 @@ int GUI::titleScreen(int start_selected) {
     }
 }
 
-void GUI::sendMessageBox(const char* message, int border_style, int border_color, int text_color) {
+void GUI::sendMessageBox(wstring message, int border_style, int border_color, int text_color) {
     WINDOW* messageBox = newwin(10, 60, LINES/2-5, COLS/2-30);
     switch(border_style) {
-        case 0:
-            wborder(messageBox, '|', '|', '-', '-', '+', '+', '+', '+');
+        case 0: 
+            wwborder(messageBox, '|', '|', '-', '-', '+', '+', '+', '+');
         break;
         case 1:
-            for(int i = 1; i < 59; i++) {
-                mvwprintw(messageBox, 0, i, "%lc", L'─');
-                mvwprintw(messageBox, 9, i, "%lc", L'─');
-            }
-            for(int i = 0; i < 10; i++) {
-                mvwprintw(messageBox, i, 0, "%lc", L'│');
-                mvwprintw(messageBox, i, 59, "%lc", L'│');
-            }
-            mvwprintw(messageBox, 0, 0, "%lc", L'┌');
-            mvwprintw(messageBox, 0, 59, "%lc", L'┐');
-            mvwprintw(messageBox, 9, 0, "%lc", L'└');
-            mvwprintw(messageBox, 9, 59, "%lc", L'┘');
-            
-            // V cringe and doesnt work V
-            //wborder(messageBox, L'│', L'│', L'─', L'┌', L'┐', L'└', L'┘');
+            wwborder(messageBox, L'│', L'│', L'─', L'─', L'┌', L'┐', L'└', L'┘');
         break;
         case 2:
-            wborder(messageBox, '|', '|', '-', '-', '+', '+', '+', '+');
+            wwborder(messageBox, '|', '|', '-', '-', '+', '+', '+', '+');
         break;
     }
-    
-    string a = "Lorem ipsum dolor sit amet....";
-    mvwprintw(messageBox, 1, 2, a.c_str());
-    mvwprintw(messageBox, 3, 2, a.c_str());
+    int n = 0, m = 0;
+    int scroll_delay = 60;
+    for(int i = 0; i < message.length(); i++) {
+        if(message[i] == '\n') {
+            n++;
+            m = 0;
+            continue;
+        }
+        mvwprintw(messageBox, 1+n, 2+m, "%lc", message[i]);
+        m++;
+        wrefresh(messageBox);
+        int in = getch();
+        if(in == keyConfirm || in == keyDeny) {
+            scroll_delay = 0;
+        }
+        napms(scroll_delay);
+    }
     wrefresh(messageBox);
     back:
     int in = wgetch(messageBox);
@@ -463,6 +461,10 @@ void GUI::sendMessageBox(const char* message, int border_style, int border_color
         goto back;
     }
     delwin(messageBox);
+    return;
+}
+
+void GUI::setCG(int cg_n) {
     return;
 }
 
@@ -485,7 +487,7 @@ void Map::changeFloor(int floor_number, string change_text) {
 void Map::changeRoom(int room_number, int x, int y) {
     currentRoom = room_number;
     auto& active_room = floor.room[currentRoom];
-
+    
     lightmap.resize(active_room.art.size(), vector<short>(active_room.art[0].size()));
     player.setPos(x,y);
 
@@ -514,23 +516,23 @@ void Map::initFloorPickups(int floor_n) {
             //        i--;
             //    }
             //}
-            for(int i = 0; i < 10; i++) {
-                rand_room = rand()%active_floor.room.size();
-                rand_line = 1 + (rand() % (active_floor.room[rand_room].art.size()-1 ) );
-                rand_col = 2 + 2 * (rand() % (active_floor.room[rand_room].art[0].size()/2 - 1 ) );
-                if(spawnPickup(note_pickup, i, rand_col, rand_line, rand_room) != 0) {
-                    i--;
-                }
-            }
-
-            for(int i = 0; i < 12; i++) {
-                rand_room = rand()%active_floor.room.size();
-                rand_line = 1 + (rand() % (active_floor.room[rand_room].art.size()-1 ) );
-                rand_col = 2 + 2 * (rand() % (active_floor.room[rand_room].art[0].size()/2 - 1 ) );
-                if(spawnPickup(lighter_fuel_pickup, 3, rand_col, rand_line, rand_room) != 0) {
-                    i--;
-                }
-            }
+            //for(int i = 0; i < 10; i++) {
+            //    rand_room = rand()%active_floor.room.size();
+            //    rand_line = 1 + (rand() % (active_floor.room[rand_room].art.size()-1 ) );
+            //    rand_col = 2 + 2 * (rand() % (active_floor.room[rand_room].art[0].size()/2 - 1 ) );
+            //    if(spawnPickup(note_pickup, i, rand_col, rand_line, rand_room) != 0) {
+            //        i--;
+            //    }
+            //}
+//
+            //for(int i = 0; i < 12; i++) {
+            //    rand_room = rand()%active_floor.room.size();
+            //    rand_line = 1 + (rand() % (active_floor.room[rand_room].art.size()-1 ) );
+            //    rand_col = 2 + 2 * (rand() % (active_floor.room[rand_room].art[0].size()/2 - 1 ) );
+            //    if(spawnPickup(lighter_fuel_pickup, 3, rand_col, rand_line, rand_room) != 0) {
+            //        i--;
+            //    }
+            //}
 
         break;
 
@@ -705,7 +707,7 @@ void Map::loadFloor(int floor_n) {
     playerPos.x = floor_starting_coords[floor_n].first;
     playerPos.y = floor_starting_coords[floor_n].second;
 
-    gameMap.initFloorPickups(floor_n);
+    //gameMap.initFloorPickups(floor_n);
 
     return;
 }  
@@ -758,7 +760,7 @@ int Game::update (WINDOW* win, WINDOW* message_log) {
 
     // debug
     if(frame == 120) {
-        gui.sendMessageBox("asd",1, 0, 0);
+        gui.sendMessageBox(L"L╳rem ╪psum dolor sit amet\n╚onsectetur ╳dipiscing el╳t", 0, 0, 0);
     }
 
     frame++;
@@ -868,7 +870,7 @@ int Game::update (WINDOW* win, WINDOW* message_log) {
         player.move(in);
     }
 
-    if(in == 'p' || in == 'P') {
+    if(in == keyPause || in == keyPause - 32) {
         if(gui.pauseMenu()) {
             delwin(win);
             return 1;

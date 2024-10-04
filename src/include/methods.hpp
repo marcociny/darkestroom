@@ -424,23 +424,61 @@ int GUI::titleScreen(int start_selected) {
     }
 }
 
-void GUI::sendMessageBox(wstring message, int border_style, int border_color, int text_color) {
-    WINDOW* messageBox = newwin(10, 60, LINES/2-5, COLS/2-30);
-    switch(border_style) {
+// messageBoxOpenAnim and sendMessageBox assume that the box's size is 10 lines and 60 columns.
+void GUI::messageBoxOpenAnim(int borderStyle, int borderColor) {
+    for(int i = 1; i < 5; i++) {
+        WINDOW* anim = newwin(2*i, 60, LINES/2-i, COLS/2-30);
+        switch(borderStyle) {
+            case 0:
+                wwborder(anim, '|', '|', '-', '-', '+', '+', '+', '+');
+            break;
+            case 1:
+                wwborder(anim, L'│', L'│', L'─', L'─', L'┌', L'┐', L'└', L'┘');
+            break;
+        }
+        
+        wrefresh(anim);
+        napms(30);
+        werase(anim);
+        delwin(anim);
+    }
+}
+
+void GUI::styleMessageBox(WINDOW* messageBox, int borderStyle, int borderColor, int textColor, int textStyle) {
+    switch(borderStyle) {
         case 0: 
             wwborder(messageBox, '|', '|', '-', '-', '+', '+', '+', '+');
         break;
         case 1:
             wwborder(messageBox, L'│', L'│', L'─', L'─', L'┌', L'┐', L'└', L'┘');
         break;
-        case 2:
-            wwborder(messageBox, '|', '|', '-', '-', '+', '+', '+', '+');
-        break;
     }
+}
+
+void GUI::sendMessageBox(wstring message, int borderStyle, int borderColor, int textColor, int textStyle) {
+    messageBoxOpenAnim(borderStyle, borderColor);
+    WINDOW* messageBox = newwin(10, 60, LINES/2-5, COLS/2-30);
+    styleMessageBox(messageBox, borderStyle, borderColor, textColor, textStyle);
     int n = 0, m = 0;
-    int scroll_delay = 60;
+    const int SCROLL_DELAY = 40;
+    int scroll_delay = SCROLL_DELAY;
     for(int i = 0; i < message.length(); i++) {
+        if(message[i] == '\t') {
+            scroll_delay = SCROLL_DELAY;
+            wgetch(messageBox);
+            werase(messageBox);
+            styleMessageBox(messageBox, borderStyle, borderColor, textColor, textStyle);
+            n = 0;
+            m = 0;
+            continue;
+        }
         if(message[i] == '\n') {
+            n+=2;
+            m = 0;
+            napms(2 * scroll_delay); // an extra pause
+            continue;
+        }
+        if(message[i] == '\e') { // which stands for 'enjambement'
             n++;
             m = 0;
             continue;
@@ -760,7 +798,8 @@ int Game::update (WINDOW* win, WINDOW* message_log) {
 
     // debug
     if(frame == 120) {
-        gui.sendMessageBox(L"L╳rem ╪psum dolor sit amet\n╚onsectetur ╳dipiscing el╳t", 0, 0, 0);
+        gui.sendMessageBox(L"So you finally made it.\nThe end of your journey is at hand.\nTogether... You will determine the future of this world.\nThat's then.\tYou will be judged.\nYou will be judged for your every action.\nYou will be judged for every EXP you've earned.\tWhat's EXP? It's an acronym.\nIt stands for \"execution points.\"\tA way of quantifying the pain you have inflicted\eon others.\nWhen you kill someone, your EXP increases.\nWhen you have enough EXP, your LOVE increases.\tLOVE, too, is an acronym.", 0, 0, 0, 0);
+
     }
 
     frame++;

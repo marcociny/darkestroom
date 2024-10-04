@@ -85,8 +85,9 @@ class Player {
 }player;
 
 class GUI {
-
     private:
+    void messageBoxOpenAnim(int, int);
+    void styleMessageBox(WINDOW*, int, int, int, int);
 
     public:
 
@@ -96,7 +97,7 @@ class GUI {
     void keybindsMenu();
     void settings();
     int titleScreen(int start_selected);
-    void sendMessageBox(wstring, int, int, int);
+    void sendMessageBox(wstring, int, int, int, int);
     void setCG(int);
     /*----------------------------------------------*/
 }gui;

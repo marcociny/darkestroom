@@ -14,7 +14,7 @@ int load_save_file() {
     if(filesystem::exists(save_file_path)) {
         ifstream save_file(save_file_path);
         save_file >> REFRESH_RATE >> FRAMES_PER_SECOND  >> LANG_OPTION >> FRAMES_OPTION; 
-        save_file >> keyConfirm >> keyToggleLighter >> keyUp >> keyDown >> keyLeft >> keyRight;
+        save_file >> keyConfirm >> keyDeny >> keyUp >> keyDown >> keyLeft >> keyRight;
         save_file >> player.maxLighterFuel >> player.lighterFuel;
         save_file >> currentFloor >> currentRoom >> player.getPos().x >> player.getPos().y;
         save_file.close();

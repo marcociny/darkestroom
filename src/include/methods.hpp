@@ -425,9 +425,10 @@ int GUI::titleScreen(int start_selected) {
 }
 
 // messageBoxOpenAnim and sendMessageBox assume that the box's size is 10 lines and 60 columns.
-void GUI::messageBoxOpenAnim(int borderStyle, int borderColor) {
+void GUI::MessageBox::openAnim() {
     for(int i = 1; i < 5; i++) {
         WINDOW* anim = newwin(2*i, 60, LINES/2-i, COLS/2-30);
+        wattron(anim, COLOR_PAIR(borderColor));
         switch(borderStyle) {
             case 0:
                 wwborder(anim, '|', '|', '-', '-', '+', '+', '+', '+');
@@ -437,6 +438,7 @@ void GUI::messageBoxOpenAnim(int borderStyle, int borderColor) {
             break;
         }
         
+        
         wrefresh(anim);
         napms(30);
         werase(anim);
@@ -444,7 +446,8 @@ void GUI::messageBoxOpenAnim(int borderStyle, int borderColor) {
     }
 }
 
-void GUI::styleMessageBox(WINDOW* messageBox, int borderStyle, int borderColor, int textColor, int textStyle) {
+void GUI::MessageBox::style() {
+    wattron(messageBox, COLOR_PAIR(borderColor));
     switch(borderStyle) {
         case 0: 
             wwborder(messageBox, '|', '|', '-', '-', '+', '+', '+', '+');
@@ -453,46 +456,136 @@ void GUI::styleMessageBox(WINDOW* messageBox, int borderStyle, int borderColor, 
             wwborder(messageBox, L'│', L'│', L'─', L'─', L'┌', L'┐', L'└', L'┘');
         break;
     }
+    wattroff(messageBox, COLOR_PAIR(borderColor));
+    wattron(messageBox, COLOR_PAIR(textColor));
 }
 
-void GUI::sendMessageBox(wstring message, int borderStyle, int borderColor, int textColor, int textStyle) {
-    messageBoxOpenAnim(borderStyle, borderColor);
-    WINDOW* messageBox = newwin(10, 60, LINES/2-5, COLS/2-30);
-    styleMessageBox(messageBox, borderStyle, borderColor, textColor, textStyle);
+void GUI::MessageBox::writeMessage(wstring message) {
     int n = 0, m = 0;
     const int SCROLL_DELAY = 40;
     int scroll_delay = SCROLL_DELAY;
-    for(int i = 0; i < message.length(); i++) {
-        if(message[i] == '\t') {
-            scroll_delay = SCROLL_DELAY;
-            wgetch(messageBox);
-            werase(messageBox);
-            styleMessageBox(messageBox, borderStyle, borderColor, textColor, textStyle);
-            n = 0;
-            m = 0;
-            continue;
+    switch(textStyle) {
+        case 0:
+        for(int i = 0; i < message.length(); i++) {
+            if(message[i] == '\t') {
+                scroll_delay = SCROLL_DELAY;
+                wgetch(messageBox);
+                werase(messageBox);
+                style();
+                n = 0;
+                m = 0;
+                continue;
+            }
+            if(message[i] == '\n') {
+                n+=2;
+                m = 0;
+                napms(2 * scroll_delay); // an extra pause
+                continue;
+            }
+            if(message[i] == '\e') { // which stands for 'enjambement'
+                n++;
+                m = 0;
+                continue;
+            }
+            mvwprintw(messageBox, 1+n, 2+m, "%lc", message[i]);
+            m++;
+            wrefresh(messageBox);
+            int in = getch();
+            if(in == keyConfirm || in == keyDeny) {
+                scroll_delay = 0;
+            }
+            napms(scroll_delay);
         }
-        if(message[i] == '\n') {
-            n+=2;
-            m = 0;
-            napms(2 * scroll_delay); // an extra pause
-            continue;
+        break;
+
+        // shittiest code imaginable: do not even attempt to read (no I won't fix it, it's not broken)
+        case 1:
+        vector<pair<int,int>>memo(message.length(), {-1, -1});
+        int j = -5;
+        int newline = 0;
+        message += (L'\t');
+        for(int i = 0; i < message.length(); i++) {
+            if(message[i] == '\t') {
+                if(i != j - 1) {i--; goto a;}
+                newline = j;
+                j -= 5;
+                scroll_delay = SCROLL_DELAY;
+                werase(messageBox);
+                style();
+                n = 0;
+                m = 0;
+                memo.clear();
+                memo[i] = {n, m};
+                continue;
+            }
+            if(message[i] == '\n') {
+                n+=2;
+                m = 0;
+                memo[i] = {n, m};
+                napms(2 * scroll_delay); // an extra pause
+                continue;
+            }
+            if(message[i] == '\e') { // which stands for 'enjambement'
+                n++;
+                m = 0;
+                memo[i] = {n, m};
+                continue;
+            }
+            memo[i] = {n, m};
+
+            if(message[i] >= 'a' and message[i] <= 'z') {
+                mvwprintw(messageBox, 1+n, 2+m, "%lc", (message[i] - 97 + 13) % 26 + 97);
+            }
+            else if(message[i] >= 'A' and message[i] <= 'Z') {
+                mvwprintw(messageBox, 1+n, 2+m, "%lc", (message[i] - 65 + 13) % 26 + 65);
+            }
+            else {
+                mvwprintw(messageBox, 1+n, 2+m, "%lc", message[i]);
+            }
+            
+            m++;
+            a:
+            if(j - newline >= 0) {
+                if(message[j] == '\t') {
+                    scroll_delay = SCROLL_DELAY;
+                    wgetch(messageBox); // stop till a key is pressed
+                    werase(messageBox);
+                    style();
+                    goto e;
+                }
+                if(message[j] == '\n') {
+                    napms(2 * scroll_delay); // an extra pause
+                    goto e;
+                }
+                if(message[j] == '\e') { // which stands for 'enjambement'
+                    goto e;
+                }
+
+                mvwprintw(messageBox, 1+memo[j].first, 2+memo[j].second, "%lc", message[j]);
+            }
+            e:
+            j++;
+            if(j == message.length()-1) break;
+
+            wrefresh(messageBox);
+            int in = getch();
+            if(in == keyConfirm || in == keyDeny) {
+                scroll_delay = 0;
+            }
+            napms(scroll_delay);
         }
-        if(message[i] == '\e') { // which stands for 'enjambement'
-            n++;
-            m = 0;
-            continue;
-        }
-        mvwprintw(messageBox, 1+n, 2+m, "%lc", message[i]);
-        m++;
-        wrefresh(messageBox);
-        int in = getch();
-        if(in == keyConfirm || in == keyDeny) {
-            scroll_delay = 0;
-        }
-        napms(scroll_delay);
+        break;
     }
+}
+
+void GUI::MessageBox::send(wstring message) {
+    
+    openAnim();
+    style();
+    
+    writeMessage(message);
     wrefresh(messageBox);
+    
     back:
     int in = wgetch(messageBox);
     if(in != keyConfirm && in != keyDeny) {
@@ -798,8 +891,8 @@ int Game::update (WINDOW* win, WINDOW* message_log) {
 
     // debug
     if(frame == 120) {
-        gui.sendMessageBox(L"So you finally made it.\nThe end of your journey is at hand.\nTogether... You will determine the future of this world.\nThat's then.\tYou will be judged.\nYou will be judged for your every action.\nYou will be judged for every EXP you've earned.\tWhat's EXP? It's an acronym.\nIt stands for \"execution points.\"\tA way of quantifying the pain you have inflicted\eon others.\nWhen you kill someone, your EXP increases.\nWhen you have enough EXP, your LOVE increases.\tLOVE, too, is an acronym.", 0, 0, 0, 0);
-
+        GUI::MessageBox box = GUI::MessageBox(0, 11, 1, 12);
+        box.send(L"So you finally made it.\nThe end of your journey is at hand.\nTogether... You will determine the future of this world.\nThat's then.\tYou will be judged.\nYou will be judged for your every action.\nYou will be judged for every EXP you've earned.\tWhat's EXP? It's an acronym.\nIt stands for \"execution points.\"\tA way of quantifying the pain you have inflicted\eon others.\nWhen you kill someone, your EXP increases.\nWhen you have enough EXP, your LOVE increases.\tLOVE, too, is an acronym.");
     }
 
     frame++;

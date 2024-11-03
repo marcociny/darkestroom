@@ -86,18 +86,38 @@ class Player {
 
 class GUI {
     private:
-    void messageBoxOpenAnim(int, int);
-    void styleMessageBox(WINDOW*, int, int, int, int);
+
 
     public:
 
     /*----------------------------------------------*/
+    class MessageBox {
+        private:
+        void openAnim();
+        void style();
+        void writeMessage(wstring);
+        WINDOW *messageBox = newwin(10, 60, LINES/2-5, COLS/2-30);
+
+        public:
+        int borderStyle, borderColor, textStyle, textColor;
+        wstring message;
+        
+
+        MessageBox(int borderStyle, int borderColor, int textStyle, int textColor) {
+            this->borderStyle = borderStyle;
+            this->borderColor = borderColor;
+            this->textStyle = textStyle;
+            this->textColor = textColor;
+        }
+        void send(wstring);
+
+    };
     int pauseMenu();
     void credits();
     void keybindsMenu();
     void settings();
     int titleScreen(int start_selected);
-    void sendMessageBox(wstring, int, int, int, int);
+    
     void setCG(int);
     /*----------------------------------------------*/
 }gui;

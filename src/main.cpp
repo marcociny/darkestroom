@@ -50,6 +50,7 @@ int main () {
     init_pair(25, COLOR_CYAN+8, COLOR_BLACK);
 
     gameMap.loadFloor(0);
+    game.init();
 
     int in = 0, res;
 

@@ -27,7 +27,7 @@ void MessageLog::sendMessage(char* line, int duration) {
 
 
 coord Player::getPos() {
-    return pos; 
+    return pos;
 }
 
 void Player::setPos (int x, int y) {
@@ -77,6 +77,22 @@ void Player::toggleLighter() {
 
 bool Player::isLighterOn() {
     return lighterOn;
+}
+
+void GUI::cutscene(int cut_no) {
+    switch(cut_no) {
+
+        case 0:
+        GUI::MessageBox mc(0, 0, 0, 0);
+        mc.send(L"This is where it all began.\tIt was months ago,\ebut I still remember it like it was yesterday.");
+        gameMap.toggleFullbright();
+        game.update(); game.update();
+        napms(1000);
+        mc.send(L"It was in the middle of spring,\nwe had to go to school on Saturday for\ean obligatory certificate no one cares about.");
+        napms(1000);
+        
+        break;
+    }
 }
 
 int GUI::pauseMenu() {
@@ -580,6 +596,8 @@ void GUI::MessageBox::writeMessage(wstring message) {
 
 void GUI::MessageBox::send(wstring message) {
     
+    messageBox = newwin(10, 60, LINES/2-5, COLS/2-30);
+
     openAnim();
     style();
     
@@ -596,6 +614,12 @@ void GUI::MessageBox::send(wstring message) {
 }
 
 void GUI::setCG(int cg_n) {
+    
+    return;
+}
+
+void Map::toggleFullbright() {
+    fullbright = !fullbright;
     return;
 }
 
@@ -705,9 +729,17 @@ void Map::resetTile(int x, int y) {
 }
 
 void Map::clearLightmap() {
-    for(int i = 0; i < lightmap.size(); i++) {
-        fill(lightmap[i].begin(), lightmap[i].end(), 0);
+    if(gameMap.fullbright) {
+        for(int i = 0; i < lightmap.size(); i++) {
+            fill(lightmap[i].begin(), lightmap[i].end(), 3);
+        }
     }
+    else {
+        for(int i = 0; i < lightmap.size(); i++) {
+            fill(lightmap[i].begin(), lightmap[i].end(), 0);
+        }
+    }
+
 }
 
 int Map::getLightLevel(int depth, int radius) {
@@ -877,9 +909,13 @@ void Game::newGame () {
     return;
 }
 
-int Game::update (WINDOW* win, WINDOW* message_log) {
+void Game::checkForCutscenes() {
+    if(frame == 3) {
+        gui.cutscene(0);
+    }
+}
 
-    static unsigned long frame = 0;
+int Game::update() {
     static int last_tick_lines = LINES, last_tick_cols = COLS;
     static wchar_t spinning_wheel = '/';
 
@@ -889,15 +925,11 @@ int Game::update (WINDOW* win, WINDOW* message_log) {
         return 2;
     }
 
-    // debug
-    if(frame == 120) {
-        GUI::MessageBox box = GUI::MessageBox(0, 11, 1, 12);
-        box.send(L"So you finally made it.\nThe end of your journey is at hand.\nTogether... You will determine the future of this world.\nThat's then.\tYou will be judged.\nYou will be judged for your every action.\nYou will be judged for every EXP you've earned.\tWhat's EXP? It's an acronym.\nIt stands for \"execution points.\"\tA way of quantifying the pain you have inflicted\eon others.\nWhen you kill someone, your EXP increases.\nWhen you have enough EXP, your LOVE increases.\tLOVE, too, is an acronym.");
-    }
-
     frame++;
+
+    game.checkForCutscenes();
     
-    game.renderMap(win);
+    game.renderMap();
     
     // debug
     {
@@ -941,11 +973,8 @@ int Game::update (WINDOW* win, WINDOW* message_log) {
 
     // lighter fuel and health GUI
     {
-        
         int consumption_speed = FRAMES_PER_SECOND/(player.lighterFuelConsumption*4);
         int regen_speed = (FRAMES_PER_SECOND/(player.lighterFuelRegen*4));
-
-
 
         // lighter fuel bar rendering
         if(ENABLE_LIGHTER_BAR) {
@@ -976,7 +1005,6 @@ int Game::update (WINDOW* win, WINDOW* message_log) {
                 }
             }
         }
-
 
         // health bar rendering
         if(ENABLE_HEALTH_BAR) {
@@ -1019,14 +1047,6 @@ int Game::gameMain () {
     //    introduction();
     //}
 
-    WINDOW* win = newwin((int)LINES * 0.75, COLS,0,0);
-    nodelay(stdscr, TRUE);
-    keypad(win, TRUE);
-    WINDOW* message_log = newwin((int)LINES * 0.25, (int)COLS,LINES * 0.75, 0);
-    wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
-    wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
-    wrefresh(win);
-    wrefresh(message_log);
     
     string floor_splash = "Floor"; floor_splash += (char)currentFloor+48; floor_splash += "Splash";
 
@@ -1036,7 +1056,7 @@ int Game::gameMain () {
 
     while(1) {
         auto time_begin = chrono::steady_clock::now();
-        int status_code = game.update(win, message_log);
+        int status_code = game.update();
         auto time_end = chrono::steady_clock::now();
         
         if(status_code != 0) {
@@ -1214,7 +1234,7 @@ void Game::initPlayer() {
     return;
 }
 
-void Game::renderMap(WINDOW *win) {
+void Game::renderMap() {
 
     auto& active_room = gameMap.floor.room[currentRoom];
     int active_room_lines = active_room.art.size();
@@ -1239,14 +1259,14 @@ void Game::renderMap(WINDOW *win) {
 
         for(int j = 0; j < active_room_cols; j++) {
             
-            if(gameMap.lightmap[i][j] == 0 || gameMap.lightmap[i][j] == 1) {
+            if(gameMap.lightmap[i][j] == 0 or gameMap.lightmap[i][j] == 1) {
                 wattron(win, COLOR_PAIR(1));
                 wprintw(win, " ");
                 wattroff(win, COLOR_PAIR(1));
                 continue;
             }
 
-            if(i == playerPos.y && j == playerPos.x) {
+            if(i == playerPos.y and j == playerPos.x) {
                 wattron(win, COLOR_PAIR(gameMap.lightmap[i][j]));
                 wprintw(win, "%lc", player.icon);
                 wattroff(win, COLOR_PAIR(gameMap.lightmap[i][j]));
@@ -1314,7 +1334,7 @@ void Game::renderMap(WINDOW *win) {
 
 }
 
-short Enemy::canMove(int x, int y) {
+short Entity::canMove(int x, int y) {
     vector<wstring>& collisions = gameMap.floor.room[currentRoom].collisions;
     if (collisions[y][x] != 'X' || collisions[y][x] != 'O') {
         return 1;
@@ -1322,31 +1342,31 @@ short Enemy::canMove(int x, int y) {
     else return 0;
 }
 
-void Enemy::moveUp () {
+void Entity::moveUp () {
     this->pos.y--;
     this->facingDirection = 2;
     return;
 }
 
-void Enemy::moveDown () {
+void Entity::moveDown () {
     this->pos.y++;
     this->facingDirection = 7;
     return;
 }
 
-void Enemy::moveLeft () {
+void Entity::moveLeft () {
     this->pos.x--;
     this->facingDirection = 4;
     return;
 }
 
-void Enemy::moveRight () {
+void Entity::moveRight () {
     this->pos.x++;
     this->facingDirection = 5;
     return;
 }
 
-void Enemy::patrolBehavior () {
+void Entity::patrolBehavior () {
     
     int y = this->pos.y;
     int x = this->pos.x;

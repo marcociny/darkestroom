@@ -5,6 +5,7 @@ typedef struct coord {
     int y;
 }coord;
 
+static unsigned long frame = 0;
 int currentRoom;
 int currentFloor;
 

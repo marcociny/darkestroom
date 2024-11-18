@@ -15,7 +15,7 @@
 #include "spinning_wheel.cpp"
 #include "custom_ncurses.hpp"
 
-#define DEBUG_MODE 4 // 0 - 4
+#define DEBUG_MODE 0 // 0 - 4
 
 #define DEBUG_VAR1 currentFloor 
 #define DEBUG_VAR2 currentRoom
@@ -96,7 +96,7 @@ class GUI {
         void openAnim();
         void style();
         void writeMessage(wstring);
-        WINDOW *messageBox = newwin(10, 60, LINES/2-5, COLS/2-30);
+        WINDOW *messageBox;
 
         public:
         int borderStyle, borderColor, textStyle, textColor;
@@ -118,6 +118,7 @@ class GUI {
     void settings();
     int titleScreen(int start_selected);
     
+    void cutscene(int);
     void setCG(int);
     /*----------------------------------------------*/
 }gui;
@@ -127,6 +128,7 @@ class Map {
 
     public:
 
+    bool fullbright = false;
     int floorLayoutX;
     int floorLayoutY;
 
@@ -135,6 +137,7 @@ class Map {
     vector<vector<short>>lightmap;
 
     /*----------------------------------------------*/
+    void toggleFullbright();
     void loadFloor(int floor_n);
     void changeFloor(int floor_number, string change_text);
     void changeRoom(int room_number, int x, int y);
@@ -156,22 +159,37 @@ class Game {
 
     public:
 
+    WINDOW* win;
+    WINDOW* message_log;
+
     /*----------------------------------------------*/
+    void init() {
+        win = newwin((int)LINES * 0.75, COLS,0,0);
+        nodelay(stdscr, TRUE);
+        keypad(win, TRUE);
+
+        message_log = newwin((int)LINES * 0.25, (int)COLS,LINES * 0.75, 0);;
+        wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
+        wborder(message_log, '|', '|', '-', '-', '+', '+', '+', '+');
+        wrefresh(win);
+        wrefresh(message_log);
+    }
     void introduction();
     void newGame();
-    int update(WINDOW*, WINDOW*);
+    void checkForCutscenes();
+    int update();
     int gameMain();
     void eventHandler(int x, int y);
     void deathSequence();
     void winSequence();
-    void renderMap(WINDOW *win);
+    void renderMap();
     void initPlayer();
     void validateScreenSize();
     /*----------------------------------------------*/
 
 }game;
 
-class Enemy {
+class Entity {
     public:
 
     coord pos;

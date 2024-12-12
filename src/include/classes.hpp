@@ -120,6 +120,7 @@ class GUI {
     
     void cutscene(int);
     void setCG(int);
+    void showBanner(string);
     /*----------------------------------------------*/
 }gui;
 

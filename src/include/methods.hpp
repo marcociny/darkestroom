@@ -83,13 +83,34 @@ void GUI::cutscene(int cut_no) {
     switch(cut_no) {
 
         case 0:
-        GUI::MessageBox mc(0, 0, 0, 0);
-        mc.send(L"This is where it all began.\tIt was months ago,\ebut I still remember it like it was yesterday.");
-        gameMap.toggleFullbright();
+        GUI::MessageBox mc(1, 0, 0, 0);
+        GUI::MessageBox postnarration(0, 2, 0, 0);
+        GUI::MessageBox beau(1, 23, 1, 23);
+        napms(4000);
+        gameMap.floor.room[currentRoom].art[4][12] = L'@';
+        gameMap.floor.room[currentRoom].colors[4][12] = 'Y';
+        gameMap.toggleFullbright(); game.update(); game.update();
+        napms(2000);
+
+        mc.send(L"For the love of god...\nCan't you just get out of my head and leave me be?\nIs it so hard for you to just not torment me?");
         game.update(); game.update();
-        napms(1000);
-        mc.send(L"It was in the middle of spring,\nwe had to go to school on Saturday for\ean obligatory certificate no one cares about.");
-        napms(1000);
+        napms(2000);
+        mc.send(L"I mean, it's been months...\nJust let me sleep in peace at the very least, will you?\nI guess you'll have more brain power to occupy\eafter I get the hours I need...");
+        game.update(); game.update();  
+        napms(1500);
+        gameMap.toggleFullbright(); game.update(); game.update();
+        napms(3000);
+        player.lighterStrength = 0;
+        //showBanner("Saturday, 8:00 AM");
+
+        //napms(2000);
+        game.update(); game.update();
+        napms(2000);
+        mc.send(L"...I don't think I can handle this any longer.\tI thought it would disappear if enough time passed,\ebut nothing changed since that day.\tMy mind is foggy, my head is numb, and worst of all,\ethe things I do have lost their meaning now.\tIt's as if I were losing my own self.\nLosing everything I've worked for...\nWhat did I do to deserve this?\tWorst of all,\ethere's no one else to blame except for me.\nIt's just my own mind playing tricks...\eEntertaining itself...\tWhat's more crippling than being unable to\econtrol what you think?\nWhat's more terrifying than to not feel safe\ein a space that's supposed to be the safest one?\tEven when I'm awake, I daydream continuously...\nNaturally, the illusion never gives me peace.\nI wouldn't be complaining so much if I were given\ea window to rest my thoughts.\nWhat will become of me, I wonder...");
+        game.update(); game.update();
+        napms(3000);
+        postnarration.send(L"As I drifted to sleep,\eI heard a strange voice from afar.\nA voice I've never heard before.\nDeep, metallic, definitely not the one of a human.\nOr any being that uses vocal chords to speak, really.");
+        beau.send(L"Blake...\nCross the hallway, Blake...\nYou don't know me\ebut I think it's time we should meet.");
         
         break;
     }
@@ -210,7 +231,7 @@ void GUI::keybindsMenu() {
         msgs[LANG_OPTION]["optBack"]
     };
 
-    vector<short> keybinds = {
+    vector<int> keybinds = {
         keyConfirm,
         keyDeny,
         keyUp,
@@ -495,7 +516,7 @@ void GUI::MessageBox::writeMessage(wstring message) {
             if(message[i] == '\n') {
                 n+=2;
                 m = 0;
-                napms(2 * scroll_delay); // an extra pause
+                //napms(2 * scroll_delay); // an extra pause
                 continue;
             }
             if(message[i] == '\e') { // which stands for 'enjambement'
@@ -514,41 +535,43 @@ void GUI::MessageBox::writeMessage(wstring message) {
         }
         break;
 
-        // shittiest code imaginable: do not even attempt to read (no I won't fix it, it's not broken)
+        // turns out the code was broken so I had to fix it, it's a bit less terrible now...
         case 1:
-        vector<pair<int,int>>memo(message.length(), {-1, -1});
-        int j = -5;
-        int newline = 0;
-        message += (L'\t');
-        for(int i = 0; i < message.length(); i++) {
+        bool finished = false;
+        int i = 0, i1 = 0;
+        int wait = 0, wait1 = 5;
+        int in;
+        int n1 = 0, m1 = 0;
+        while(!finished) {
+            // t1; uses n, m, wait
+            if(i >= message.length()) {
+                goto t2;
+            }
+            if(wait > 0) {
+                wait--;
+                goto t2;
+            }
             if(message[i] == '\t') {
-                if(i != j - 1) {i--; goto a;}
-                newline = j;
-                j -= 5;
-                scroll_delay = SCROLL_DELAY;
-                werase(messageBox);
-                style();
-                n = 0;
-                m = 0;
-                memo.clear();
-                memo[i] = {n, m};
-                continue;
+                goto t2;
             }
             if(message[i] == '\n') {
                 n+=2;
                 m = 0;
-                memo[i] = {n, m};
-                napms(2 * scroll_delay); // an extra pause
-                continue;
+                i++;
+                //napms(2 * scroll_delay); // an extra pause
+                goto t2;
             }
             if(message[i] == '\e') { // which stands for 'enjambement'
                 n++;
                 m = 0;
-                memo[i] = {n, m};
-                continue;
+                i++;
+                goto t2;
             }
-            memo[i] = {n, m};
-
+            if(message[i] == '\b') { // a short break
+                wait = 2;
+                i++;
+                goto t2;
+            }
             if(message[i] >= 'a' and message[i] <= 'z') {
                 mvwprintw(messageBox, 1+n, 2+m, "%lc", (message[i] - 97 + 13) % 26 + 97);
             }
@@ -558,38 +581,66 @@ void GUI::MessageBox::writeMessage(wstring message) {
             else {
                 mvwprintw(messageBox, 1+n, 2+m, "%lc", message[i]);
             }
-            
             m++;
-            a:
-            if(j - newline >= 0) {
-                if(message[j] == '\t') {
-                    scroll_delay = SCROLL_DELAY;
-                    wgetch(messageBox); // stop till a key is pressed
-                    werase(messageBox);
-                    style();
-                    goto e;
-                }
-                if(message[j] == '\n') {
-                    napms(2 * scroll_delay); // an extra pause
-                    goto e;
-                }
-                if(message[j] == '\e') { // which stands for 'enjambement'
-                    goto e;
-                }
-
-                mvwprintw(messageBox, 1+memo[j].first, 2+memo[j].second, "%lc", message[j]);
-            }
-            e:
-            j++;
-            if(j == message.length()-1) break;
-
+            i++;
             wrefresh(messageBox);
-            int in = getch();
+
+            // t2: uses n1, m1, wait1
+            t2:
+            if(i1 >= message.length()) {
+                goto end;
+            }
+            if(wait1 > 0) {
+                wait1--;
+                goto end;
+            }
+            if(message[i1] == '\t') {
+                scroll_delay = SCROLL_DELAY;
+                wgetch(messageBox);
+                werase(messageBox);
+                style();
+                n = 0;
+                m = 0;
+                n1 = 0;
+                m1 = 0;
+                wait1 = 5;
+                i++; i1++;
+                goto end;
+            }
+            if(message[i1] == '\n') {
+                n1+=2;
+                m1 = 0;
+                wait1 = 2;
+                i1++;
+                goto end;
+            }
+            if(message[i1] == '\e') { // which stands for 'enjambement'
+                n1++;
+                m1 = 0;
+                i1++;
+                goto end;
+            }
+        if(message[i] == '\b') { // a short break
+                wait1 = 2;
+                i1++;
+                goto end;
+            }
+            mvwprintw(messageBox, 1+n1, 2+m1, "%lc", message[i1]);
+            m1++;
+            i1++;
+            wrefresh(messageBox);
+            in = getch();
             if(in == keyConfirm || in == keyDeny) {
                 scroll_delay = 0;
             }
+
+            end:
             napms(scroll_delay);
-        }
+            if(i1 == message.length()) {
+                finished = true;
+            }
+        }        
+
         break;
     }
 }
@@ -597,6 +648,7 @@ void GUI::MessageBox::writeMessage(wstring message) {
 void GUI::MessageBox::send(wstring message) {
     
     messageBox = newwin(10, 60, LINES/2-5, COLS/2-30);
+    flushinp();
 
     openAnim();
     style();
@@ -616,6 +668,16 @@ void GUI::MessageBox::send(wstring message) {
 void GUI::setCG(int cg_n) {
     
     return;
+}
+
+void GUI::showBanner(string text) {
+    WINDOW* txtbox = newwin(LINES,COLS,0,0);
+    print_centered(txtbox, 0, 0, text.c_str());
+    wborder(txtbox, '|', '|', '-', '-', '+', '+', '+', '+');
+    wrefresh(txtbox);
+    napms(3300);
+    
+    delwin(txtbox);
 }
 
 void Map::toggleFullbright() {

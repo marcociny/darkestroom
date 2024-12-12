@@ -27,7 +27,7 @@ vector<vector<vector<wstring>>> floor_colors_source = {
             {L"............................"},
             {L"............................"},
             {L"............................"},
-            {L"............................"},
+            {L"...........Y................"},
             {L"............................"},
             {L"............................"},
             {L"............................"},
@@ -46,6 +46,24 @@ vector<vector<vector<wstring>>> floor_colors_source = {
             {L"............................"},
             {L"............................"},
 
+        },
+
+        {
+            {L".........................."},
+            {L".ggggggggggggggggggggg...."},
+            {L".ggggggggggggggggggggg...."},
+            {L"..gggggggggggggggggggg...."},
+            {L"..gggggggggggggggggggg...."},
+            {L"..gggggggggggggggggggg...."},
+            {L"..gggggggggggggggggggg...."},
+            {L"..ggggggggggggggggggggggg."},
+            {L"..ggggggggggggggggggggggg."},
+            {L".gggggggggggggggggggggggg."},
+            {L".gggggggggggggggggggggggg."},
+            {L"..ggggggggggggggggggggg..."},
+            {L"..ggggggggggggggggggggg..."},
+            {L".....................g...."},
+            {L".........................."},
         },
     },
 

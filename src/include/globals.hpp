@@ -20,4 +20,4 @@ bool ENABLE_HEALTH_BAR = false;
 char keyConfirm = 'z';
 char keyDeny = 'x';
 char keyPause = 'q';
-short keyUp = 0403, keyDown = 0402, keyLeft = 0404, keyRight = 0405;
+int keyUp = 0403, keyDown = 0402, keyLeft = 0404, keyRight = 0405;

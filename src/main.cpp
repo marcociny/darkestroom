@@ -2,12 +2,9 @@
 #include <ctime>
 #ifdef _WIN32
     #include <ncurses/ncurses.h>
-#elif __linux__
-    #include <ncurses.h>
 #else
-    #error "OS not supported!"
+    #include <ncurses.h>
 #endif
-
 using namespace std;
 
 int main () {

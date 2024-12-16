@@ -26,7 +26,7 @@ int load_save_file() {
 void save_to_file() {
     ofstream save_file(save_file_path);
     save_file << REFRESH_RATE << ' ' << FRAMES_PER_SECOND << ' '  << LANG_OPTION << ' '  << FRAMES_OPTION << '\n'; 
-    save_file << keyConfirm << ' ' << keyToggleLighter << ' ' << keyUp << ' ' << keyDown << ' ' << keyLeft << ' ' << keyRight << '\n';
+    save_file << keyConfirm << ' ' << keyDeny << ' ' << keyUp << ' ' << keyDown << ' ' << keyLeft << ' ' << keyRight << '\n';
     save_file << player.maxLighterFuel << ' ' << player.lighterFuel << '\n';
     save_file << currentFloor << ' ' << currentRoom << '\n' << player.getPos().x << ' ' << player.getPos().y;
     save_file.close();

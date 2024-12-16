@@ -207,7 +207,7 @@ class Entity {
     void moveLeft();
     void moveRight();
 
-    void patrolBehavior();
+    void patrol();
     /*----------------------------------------------*/
 };
 

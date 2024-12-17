@@ -87,7 +87,7 @@ void GUI::cutscene(int cut_no) {
         GUI::MessageBox postnarration(0, 2, 0, 0);
         GUI::MessageBox beau(1, 23, 1, 23);
         player.lockMovement();
-        //napms(4000);
+        napms(4000);
         gameMap.floor.room[currentRoom].art[4][12] = L'@';
         gameMap.floor.room[currentRoom].colors[4][12] = 'Y';
         gameMap.toggleFullbright(); game.update(); game.update();
@@ -95,21 +95,17 @@ void GUI::cutscene(int cut_no) {
 
         mc.send(L"For the love of god...\nCan't you just get out of my head and leave me be?\nIs it so hard for you to just not torment me?");
         game.update(); game.update();
-        //napms(2000);
+        napms(2000);
         mc.send(L"I mean, it's been months...\nJust let me sleep in peace at the very least, will you?\nI guess you'll have more brain power to occupy\eafter I get the hours I need...");
         game.update(); game.update();  
-        //napms(1500);
+        napms(1500);
         gameMap.toggleFullbright(); game.update(); game.update();
-        //napms(3000);
+        napms(3000);
         player.lighterStrength = 0;
-        ///showBanner("Saturday, 8:00 AM");
 
-        ///napms(2000);
         game.update(); game.update();
-        ///napms(2000);
-        ///mc.send(L"...I don't think I can handle this any longer.\tI thought it would disappear if enough time passed,\ebut nothing changed since that day.\tMy mind is foggy, my head is numb, and worst of all,\ethe things I do have lost their meaning now.\tIt's as if I were losing my own self.\nLosing everything I've worked for...\nWhat did I do to deserve this?\tWorst of all,\ethere's no one else to blame except for me.\nIt's just my own mind playing tricks...\eEntertaining itself...\tWhat's more crippling than being unable to\econtrol what you think?\nWhat's more terrifying than to not feel safe\ein a space that's supposed to be the safest one?\tEven when I'm awake, I daydream continuously...\nNaturally, the illusion never gives me peace.\nI wouldn't be complaining so much if I were given\ea window to rest my thoughts.\nWhat will become of me, I wonder...");
         game.update(); game.update();
-        //napms(3000);
+        napms(3000);
         postnarration.send(L"As I drifted to sleep,\eI heard a strange voice from afar.\nA voice I've never heard before.\nDeep, metallic, definitely not the one of a human.\nOr any being that uses vocal chords to speak, really.");
         beau.send(L"Blake...\nCross the hallway, Blake...\nYou don't know me,\ebut I think it's time we should meet.");
         player.unlockMovement();

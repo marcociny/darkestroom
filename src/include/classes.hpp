@@ -196,9 +196,15 @@ class Entity {
     coord pos;
     wchar_t icon;
     char color;
-    char ID;
     int movementBehavior;
     int facingDirection;
+
+    Entity(coord pos, wchar_t icon, char color) {
+        this->pos = pos;
+        this->icon = icon;
+        this->color = color;
+        return;
+    }
 
     /*----------------------------------------------*/
     short canMove(int, int);
